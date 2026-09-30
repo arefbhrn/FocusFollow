@@ -140,6 +140,11 @@ final class FocusController {
         rebuildClassifier()
     }
 
+    /// The saved gaze grid for a display, for showing how well it fits.
+    func gazeGrid(for displayID: String) -> [GridSample]? {
+        calibration?.screens.first { $0.id == displayID }?.grid
+    }
+
     /// Runs grid calibration on every screen that already has a screen calibration.
     func startGridCalibration() {
         let calibrated = layout.displays.filter { isCalibrated($0.id) }
@@ -269,7 +274,7 @@ final class FocusController {
     private func updateWindowFocus(now: TimeInterval) {
         guard FocusSettings.windowFocus, accessibilityTrusted, holdReason == nil, pendingSwitch == nil,
               let gaze, let display = layout.display(withID: gaze.displayID),
-              let model = gazeModels[gaze.displayID], model.error <= FocusSettings.maximumWindowError,
+              let model = gazeModels[gaze.displayID], model.gateError <= FocusSettings.maximumWindowError,
               windows.focusedDisplayID == display.id else {
             resetWindowTarget()
             return
@@ -285,7 +290,7 @@ final class FocusController {
             y: display.bounds.minY + min(max(gaze.y, 0), 1) * display.bounds.height
         )
         // The less certain the gaze, the wider the dead zone around window borders.
-        let share = model.error * FocusSettings.windowMarginScale
+        let share = model.gateError * FocusSettings.windowMarginScale
         let margin = CGSize(width: share * display.bounds.width, height: share * display.bounds.height)
         let picked = WindowPicker.pick(at: point, in: windowCandidates, margin: margin, screen: display.bounds)
         setTargetWindow(picked)

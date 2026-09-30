@@ -240,25 +240,16 @@ private struct GazeMapView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Gaze map").bold()
             if let gaze = focus.gaze, let display = focus.layout.display(withID: gaze.displayID) {
-                let height = width * display.bounds.height / max(display.bounds.width, 1)
-                ZStack(alignment: .topLeading) {
-                    Rectangle().fill(Color.secondary.opacity(0.12))
-                    Rectangle().strokeBorder(Color.secondary.opacity(0.5))
-                    ForEach(Array(targets(for: display.id).enumerated()), id: \.offset) { _, sample in
-                        Circle()
-                            .strokeBorder(Color.secondary, lineWidth: 1)
-                            .frame(width: 8, height: 8)
-                            .position(x: sample.x * width, y: sample.y * height)
-                    }
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 14, height: 14)
-                        .position(x: clamp(gaze.x) * width, y: clamp(gaze.y) * height)
-                }
-                .frame(width: width, height: height)
-                .clipShape(Rectangle())
-                Text("\(focus.layout.label(for: display.id)) · typical error \(focus.gazeModels[display.id]?.error ?? 0, format: .percent.precision(.fractionLength(0)))")
+                GridQualityMap(
+                    grid: targets(for: display.id),
+                    model: focus.gazeModels[display.id],
+                    aspect: display.bounds.width / max(display.bounds.height, 1),
+                    width: width,
+                    gaze: CGPoint(x: gaze.x, y: gaze.y)
+                )
+                Text("\(focus.layout.label(for: display.id)) · typical error \(focus.gazeModels[display.id]?.gateError ?? 0, format: .percent.precision(.fractionLength(0)))\(droppedText(for: display.id))")
                     .foregroundStyle(.secondary)
+                GridQualityLegend()
             } else if focus.gazeModels.isEmpty {
                 Text("No gaze grid yet. Use Calibrate → Calibrate Gaze Grid.")
                     .foregroundStyle(.secondary)
@@ -275,8 +266,8 @@ private struct GazeMapView: View {
         focus.calibration?.screens.first { $0.id == id }?.grid ?? []
     }
 
-    /// Keep the dot on the rectangle even when the estimate falls off the screen.
-    private func clamp(_ value: Double) -> Double {
-        min(max(value, -0.05), 1.05)
+    private func droppedText(for id: String) -> String {
+        let count = focus.gazeModels[id]?.droppedIndices.count ?? 0
+        return count == 0 ? "" : " · \(count) dots ignored"
     }
 }

@@ -153,8 +153,8 @@ private extension SettingsView {
     @ViewBuilder
     func gridStatus(for displayID: String) -> some View {
         if let model = focus.gazeModels[displayID] {
-            let usable = model.error <= FocusSettings.maximumWindowError
-            Text("Gaze grid: error \(model.error, format: .percent.precision(.fractionLength(0)))\(usable ? "" : " (too coarse for windows)")")
+            let usable = model.gateError <= FocusSettings.maximumWindowError
+            Text("Gaze grid: error \(model.gateError, format: .percent.precision(.fractionLength(0)))\(usable ? "" : " (too coarse for windows)")")
                 .font(.caption)
                 .foregroundStyle(usable ? Color.secondary : Color.orange)
         } else if focus.isCalibrated(displayID) {

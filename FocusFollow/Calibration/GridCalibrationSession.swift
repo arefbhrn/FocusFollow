@@ -185,13 +185,13 @@ final class GridCalibrationSession {
             beginTarget(keepingMessage: true)
             return
         }
-        let count = Double(poses.count)
         let target = Self.targets[targetIndex]
         results[display.id, default: []].append(GridSample(
             x: target.x,
             y: target.y,
-            yaw: poses.reduce(0) { $0 + $1.yaw } / count,
-            pitch: poses.reduce(0) { $0 + $1.pitch } / count
+            // Median, so a blink or a stray frame inside the dot's window doesn't drag the sample.
+            yaw: GazeModel.median(poses.map(\.yaw)),
+            pitch: GazeModel.median(poses.map(\.pitch))
         ))
         advance()
     }
