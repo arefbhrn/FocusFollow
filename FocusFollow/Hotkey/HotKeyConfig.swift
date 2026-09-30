@@ -10,6 +10,6 @@ enum HotKeyConfig {
 
     // The same shortcut for SwiftUI, only used to show it in the menu.
     static let keyEquivalent = KeyEquivalent("f")
-    static let eventModifiers: EventModifiers = [.control, .option, .command]
+    static let eventModifiers: SwiftUI.EventModifiers = [.control, .option, .command]
     static let displayString = "⌃⌥⌘F"
 }
