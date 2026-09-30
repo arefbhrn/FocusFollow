@@ -40,6 +40,11 @@ enum AX {
         return CGRect(origin: position, size: size)
     }
 
+    /// `false` if the attribute is missing.
+    static func isMinimized(_ window: AXUIElement) -> Bool {
+        (copy(window, kAXMinimizedAttribute) as? Bool) ?? false
+    }
+
     /// Brings the window to the front and gives it keyboard focus.
     static func focus(window: AXUIElement, pid: pid_t) {
         let app = application(pid: pid)
