@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuContent: View {
     @Bindable var appState: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Text(statusText)
@@ -16,6 +17,11 @@ struct MenuContent: View {
 
         Button(appState.isPaused ? "Resume" : "Pause") {
             appState.isPaused.toggle()
+        }
+
+        Button("Show Debug Window") {
+            openWindow(id: DebugView.windowID)
+            NSApp.activate()
         }
 
         Divider()

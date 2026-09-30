@@ -50,7 +50,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 - [x] Capture pipeline at 720p, ≤15 fps, frames kept in memory only
 - [x] Vision face detection (rev. 3) → yaw / pitch / roll per frame
 - [x] Smoothing (EMA, later maybe Kalman)
-- [ ] Debug window: live camera preview + pose readout
+- [x] Debug window: live camera preview + pose readout
 - [x] Permission flow: Camera prompt, clear message if denied
 
 ## Phase 2 — Multi-screen focus (MVP)

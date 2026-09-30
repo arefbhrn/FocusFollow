@@ -8,5 +8,10 @@ struct FocusFollowApp: App {
         MenuBarExtra("FocusFollow", systemImage: appState.isPaused ? "eye.slash" : "eye") {
             MenuContent(appState: appState)
         }
+
+        Window("FocusFollow Debug", id: DebugView.windowID) {
+            DebugView(tracker: appState.tracker)
+        }
+        .windowResizability(.contentSize)
     }
 }
