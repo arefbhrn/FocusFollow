@@ -55,21 +55,23 @@ private struct CalibrationOverlayView: View {
 
     var body: some View {
         ZStack {
-            Color.accentColor.opacity(0.18)
-            Rectangle()
-                .strokeBorder(Color.accentColor, lineWidth: 8)
-            VStack(spacing: 12) {
-                Text("Look here")
-                    .font(.system(size: 44, weight: .bold))
-                Text(model.title)
-                    .font(.title3)
-                Text(model.detail)
-                    .foregroundStyle(.secondary)
+            Color.black.opacity(0.28)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Theme.brandGradient, lineWidth: 10)
+                .padding(10)
+            VStack(spacing: Theme.Space.m) {
+                Image(systemName: "viewfinder")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundStyle(Theme.brandGradient)
+                Text("Look at this screen")
+                    .font(.system(size: 34, weight: .bold))
+                Text(model.title).font(.title3)
+                Text(model.detail).foregroundStyle(.secondary)
                 ProgressView(value: model.progress)
-                    .frame(width: 240)
+                    .frame(width: 260)
             }
-            .padding(32)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .padding(Theme.Space.xl + Theme.Space.s)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .ignoresSafeArea()
     }

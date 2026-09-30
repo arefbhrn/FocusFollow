@@ -277,18 +277,18 @@ private struct GridOverlayView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Color.accentColor.opacity(0.10)
+                Color.black.opacity(0.22)
                 TargetDot()
                     .position(x: model.point.x * geometry.size.width, y: model.point.y * geometry.size.height)
                 // Keep the card out of the half of the screen the dot is in.
-                VStack(spacing: 8) {
+                VStack(spacing: Theme.Space.s) {
                     Text(model.title).font(.headline)
                     Text(model.detail).foregroundStyle(.secondary)
                     ProgressView(value: model.progress).frame(width: 220)
                     Text("Press Esc to cancel").font(.caption).foregroundStyle(.secondary)
                 }
-                .padding(20)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .padding(Theme.Space.xl)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.l + 2, style: .continuous))
                 .position(x: geometry.size.width / 2,
                           y: model.point.y < 0.5 ? geometry.size.height * 0.78 : geometry.size.height * 0.22)
             }
@@ -297,12 +297,25 @@ private struct GridOverlayView: View {
     }
 }
 
+/// The target to look at. A soft ring pulses around it unless Reduce Motion is on.
 private struct TargetDot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulsing = false
+
     var body: some View {
         ZStack {
-            Circle().fill(Color.accentColor.opacity(0.25)).frame(width: 64, height: 64)
-            Circle().strokeBorder(Color.accentColor, lineWidth: 4).frame(width: 40, height: 40)
-            Circle().fill(Color.white).frame(width: 12, height: 12)
+            Circle()
+                .stroke(Theme.brandGradient, lineWidth: 3)
+                .frame(width: 72, height: 72)
+                .scaleEffect(pulsing ? 1.25 : 1)
+                .opacity(pulsing ? 0 : 0.8)
+            Circle().fill(.white).frame(width: 26, height: 26)
+            Circle().fill(Theme.brandGradient).frame(width: 16, height: 16)
         }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 1.1).repeatForever(autoreverses: false)) { pulsing = true }
+        }
+        .accessibilityHidden(true)
     }
 }
