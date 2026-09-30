@@ -5,7 +5,7 @@ struct FocusFollowApp: App {
     @State private var appState = AppState()
 
     var body: some Scene {
-        MenuBarExtra("FocusFollow", systemImage: appState.isRunning ? "eye" : "eye.slash") {
+        MenuBarExtra("FocusFollow", systemImage: appState.menuBarState.symbolName) {
             MenuContent(appState: appState)
         }
 
