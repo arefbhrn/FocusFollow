@@ -71,8 +71,9 @@ final class HeadTracker {
         let defaults = UserDefaults.standard
         selectedCameraID = defaults.string(forKey: Keys.camera)
         let savedSmoothing = defaults.double(forKey: Keys.smoothing)
-        smoothing = savedSmoothing > 0 ? savedSmoothing : 0.3
-        smoother = PoseSmoother(alpha: smoothing)
+        let initialSmoothing = savedSmoothing > 0 ? savedSmoothing : 0.3
+        smoothing = initialSmoothing
+        smoother = PoseSmoother(alpha: initialSmoothing)
 
         frameTask = Task { [weak self] in
             for await frame in frames {
