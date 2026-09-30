@@ -60,8 +60,8 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 - [x] Classifier: current pose → nearest screen, or "away" when outside all regions
 - [x] Dwell delay (default 300 ms) to ignore quick glances
 - [x] Track last focused window per screen
-- [ ] Switch: focus that window via Accessibility + warp cursor to that screen
-- [ ] Accessibility permission flow (check `AXIsProcessTrusted`, deep link to Settings)
+- [x] Switch: focus that window via Accessibility + warp cursor to that screen
+- [x] Accessibility permission flow (check `AXIsProcessTrusted`, deep link to Settings)
 - [x] Save calibration per display arrangement
 
 ## Phase 3 — Don't get in the way
