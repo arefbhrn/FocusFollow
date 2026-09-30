@@ -23,7 +23,7 @@ Not in v1: focusing windows on the same screen and split panes. See [ROADMAP.md]
 
 ## Install
 
-Download the zip from the latest GitHub release and move `FocusFollow.app` to Applications. The app is not notarized, so macOS blocks it the first time: open it once, then go to **System Settings → Privacy & Security** and choose **Open Anyway**.
+Download the DMG from the latest GitHub release, open it and drag `FocusFollow.app` onto Applications. The app is not notarized, so macOS blocks it the first time: open it once, then go to **System Settings → Privacy & Security** and choose **Open Anyway**.
 
 Release builds are for Apple silicon. On an Intel Mac, build from source.
 
@@ -41,6 +41,14 @@ open build/Build/Products/Debug/FocusFollow.app
 ```
 
 Only one copy can run at a time, so quit a running copy before starting a new build.
+
+To make the release DMG (needs `brew install create-dmg`):
+
+```bash
+scripts/make-dmg.sh   # writes dist/FocusFollow-<version>-arm64.dmg and prints its SHA-256
+```
+
+The app icon is drawn by `scripts/make-icon.swift`; rerun it to regenerate the PNGs in the asset catalog.
 
 ## First run
 
