@@ -17,7 +17,7 @@ Everything runs on-device. Camera frames stay in memory and are never recorded o
 | Language | Swift 6 |
 | UI | SwiftUI (`MenuBarExtra`, settings, calibration) + AppKit where needed |
 | Camera | AVFoundation (`AVCaptureSession`, 720p, ≤15 fps) |
-| Head pose | Vision (`VNDetectFaceLandmarksRequest` → yaw / pitch / roll) |
+| Head pose | Vision (`VNDetectFaceRectanglesRequest` rev. 3 → yaw / pitch / roll) |
 | Math | simd / Accelerate (smoothing, calibration fit) |
 | Windows | CoreGraphics `CGWindowListCopyWindowInfo`, `CGWarpMouseCursorPosition` |
 | Focus | Accessibility API (`AXUIElement`), `NSRunningApplication.activate` |
@@ -47,8 +47,8 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 - [ ] Menu bar app shell with `MenuBarExtra`
 - [ ] Camera selection (built-in / external)
-- [ ] Capture pipeline at 720p, ≤15 fps, frames kept in memory only
-- [ ] Vision face landmarks → yaw / pitch / roll per frame
+- [x] Capture pipeline at 720p, ≤15 fps, frames kept in memory only
+- [x] Vision face detection (rev. 3) → yaw / pitch / roll per frame
 - [x] Smoothing (EMA, later maybe Kalman)
 - [ ] Debug window: live camera preview + pose readout
 - [ ] Permission flow: Camera prompt, clear message if denied
