@@ -17,7 +17,7 @@ Everything runs on-device. Camera frames stay in memory and are never recorded o
 | Language | Swift 6 |
 | UI | SwiftUI (`MenuBarExtra`, settings, calibration) + AppKit where needed |
 | Camera | AVFoundation (`AVCaptureSession`, 720p, ≤15 fps) |
-| Head pose | Vision (`VNDetectFaceLandmarksRequest` → yaw / pitch / roll) |
+| Head pose | Vision (`VNDetectFaceRectanglesRequest` rev. 3 → yaw / pitch / roll) |
 | Math | simd / Accelerate (smoothing, calibration fit) |
 | Windows | CoreGraphics `CGWindowListCopyWindowInfo`, `CGWarpMouseCursorPosition` |
 | Focus | Accessibility API (`AXUIElement`), `NSRunningApplication.activate` |
@@ -33,6 +33,8 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ---
 
+> **v1.0.0** = Phases 0–4: multi-screen focus, pauses, settings. Phases 5–8 are post-v1.
+
 ## Phase 0 — Project setup
 
 - [x] Git repo + GitHub remote
@@ -45,43 +47,43 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 1 — Camera + head pose (prototype)
 
-- [ ] Menu bar app shell with `MenuBarExtra`
-- [ ] Camera selection (built-in / external)
-- [ ] Capture pipeline at 720p, ≤15 fps, frames kept in memory only
-- [ ] Vision face landmarks → yaw / pitch / roll per frame
-- [ ] Smoothing (EMA, later maybe Kalman)
-- [ ] Debug window: live camera preview + pose readout
-- [ ] Permission flow: Camera prompt, clear message if denied
+- [x] Menu bar app shell with `MenuBarExtra`
+- [x] Camera selection (built-in / external)
+- [x] Capture pipeline at 720p, ≤15 fps, frames kept in memory only
+- [x] Vision face detection (rev. 3) → yaw / pitch / roll per frame
+- [x] Smoothing (EMA, later maybe Kalman)
+- [x] Debug window: live camera preview + pose readout
+- [x] Permission flow: Camera prompt, clear message if denied
 
 ## Phase 2 — Multi-screen focus (MVP)
 
-- [ ] Read display layout from `NSScreen`
-- [ ] Calibration flow: look at each screen ~20 s, store pose samples per screen
-- [ ] Classifier: current pose → nearest screen, or "away" when outside all regions
-- [ ] Dwell delay (default 300 ms) to ignore quick glances
-- [ ] Track last focused window per screen
-- [ ] Switch: focus that window via Accessibility + warp cursor to that screen
-- [ ] Accessibility permission flow (check `AXIsProcessTrusted`, deep link to Settings)
-- [ ] Save calibration per display arrangement
+- [x] Read display layout from `NSScreen`
+- [x] Calibration flow: look at each screen ~20 s, store pose samples per screen
+- [x] Classifier: current pose → nearest screen, or "away" when outside all regions
+- [x] Dwell delay (default 300 ms) to ignore quick glances
+- [x] Track last focused window per screen
+- [x] Switch: focus that window via Accessibility + warp cursor to that screen
+- [x] Accessibility permission flow (check `AXIsProcessTrusted`, deep link to Settings)
+- [x] Save calibration per display arrangement
 
 ## Phase 3 — Don't get in the way
 
-- [ ] Pause after typing (default 3 s since last keystroke)
-- [ ] Pause after mouse / trackpad activity (default 1.5 s)
-- [ ] Ignore "away" poses (phone, ceiling, desk)
-- [ ] Pause on sleep, screen lock, screensaver
-- [ ] Global pause / resume hotkey (⇧⌘G or configurable)
-- [ ] Menu bar icon reflects state (active / paused / no face / no permission)
-- [ ] Re-detect display changes (plug / unplug monitor) and prompt recalibration
+- [x] Pause after typing (default 3 s since last keystroke)
+- [x] Pause after mouse / trackpad activity (default 1.5 s)
+- [x] Ignore "away" poses (phone, ceiling, desk)
+- [x] Pause on sleep, screen lock, screensaver
+- [x] Global pause / resume hotkey (default ⌃⌥⌘F, configurable later; ⇧⌘G collides with "Go to Folder" / "Find Previous")
+- [x] Menu bar icon reflects state (active / paused / no face / no permission)
+- [x] Re-detect display changes (plug / unplug monitor) and prompt recalibration
 
 ## Phase 4 — Settings
 
-- [ ] Dwell delay, typing pause, mouse pause sliders
-- [ ] Head-turn sensitivity
-- [ ] Toggle: move cursor with focus
-- [ ] Camera picker
-- [ ] Launch at login (`SMAppService`)
-- [ ] Recalibrate button + per-screen calibration status
+- [x] Dwell delay, typing pause, mouse pause sliders
+- [x] Head-turn sensitivity
+- [x] Toggle: move cursor with focus
+- [x] Camera picker
+- [x] Launch at login (`SMAppService`)
+- [x] Recalibrate button + per-screen calibration status
 
 ## Phase 5 — Same-screen window focus
 
