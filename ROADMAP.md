@@ -62,7 +62,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 - [ ] Track last focused window per screen
 - [ ] Switch: focus that window via Accessibility + warp cursor to that screen
 - [ ] Accessibility permission flow (check `AXIsProcessTrusted`, deep link to Settings)
-- [ ] Save calibration per display arrangement
+- [x] Save calibration per display arrangement
 
 ## Phase 3 — Don't get in the way
 
