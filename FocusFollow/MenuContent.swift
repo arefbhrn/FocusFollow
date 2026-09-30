@@ -11,6 +11,10 @@ struct MenuContent: View {
             Text(lookingAt)
         }
 
+        if let hold = appState.focus.holdReason {
+            Text(hold.label)
+        }
+
         if appState.focus.hasNewDisplaySetup {
             Text("New display setup — calibration needed")
         } else {

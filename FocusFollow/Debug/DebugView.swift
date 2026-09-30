@@ -137,6 +137,7 @@ private struct FocusReadout: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Focus").bold()
             Text("Accessibility: \(focus.accessibilityTrusted ? "granted" : "not granted")")
+            Text("Switching: \(focus.holdReason?.label ?? "free")")
             if focus.calibration == nil {
                 Text("Not calibrated for this display setup")
             } else if let evaluation = focus.evaluation {
