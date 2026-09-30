@@ -49,7 +49,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 - [ ] Camera selection (built-in / external)
 - [ ] Capture pipeline at 720p, ≤15 fps, frames kept in memory only
 - [ ] Vision face landmarks → yaw / pitch / roll per frame
-- [ ] Smoothing (EMA, later maybe Kalman)
+- [x] Smoothing (EMA, later maybe Kalman)
 - [ ] Debug window: live camera preview + pose readout
 - [ ] Permission flow: Camera prompt, clear message if denied
 
