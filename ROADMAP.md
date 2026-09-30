@@ -57,8 +57,8 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 - [x] Read display layout from `NSScreen`
 - [ ] Calibration flow: look at each screen ~20 s, store pose samples per screen
-- [ ] Classifier: current pose → nearest screen, or "away" when outside all regions
-- [ ] Dwell delay (default 300 ms) to ignore quick glances
+- [x] Classifier: current pose → nearest screen, or "away" when outside all regions
+- [x] Dwell delay (default 300 ms) to ignore quick glances
 - [ ] Track last focused window per screen
 - [ ] Switch: focus that window via Accessibility + warp cursor to that screen
 - [ ] Accessibility permission flow (check `AXIsProcessTrusted`, deep link to Settings)
