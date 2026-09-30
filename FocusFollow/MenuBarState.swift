@@ -25,7 +25,7 @@ extension AppState {
         if !focus.accessibilityTrusted || focus.calibration == nil { return .needsAttention }
         switch tracker.status {
         case .permissionDenied, .noCamera, .failed: return .needsAttention
-        case .running: return tracker.pose == nil ? .noFace : .active
+        case .running: return !tracker.hasFace ? .noFace : .active
         case .stopped, .requestingPermission: return .active
         }
     }

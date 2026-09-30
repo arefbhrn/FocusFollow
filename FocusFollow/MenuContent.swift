@@ -80,7 +80,7 @@ struct MenuContent: View {
         case .permissionDenied: return "No camera permission"
         case .noCamera: return "No camera found"
         case .failed: return "Camera error"
-        case .running: return appState.tracker.pose == nil ? "Active — no face" : "Active"
+        case .running: return !appState.tracker.hasFace ? "Active — no face" : "Active"
         }
     }
 }

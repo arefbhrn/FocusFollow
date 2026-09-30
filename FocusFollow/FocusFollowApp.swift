@@ -2,12 +2,13 @@ import SwiftUI
 
 @main
 struct FocusFollowApp: App {
-    @State private var appState: AppState
-
-    init() {
+    /// SwiftUI may rebuild the App struct, so the state lives in a static to be created exactly once.
+    private static let sharedState: AppState = {
         SingleInstance.exitIfAnotherInstanceIsRunning()
-        _appState = State(initialValue: AppState())
-    }
+        return AppState()
+    }()
+
+    @State private var appState = FocusFollowApp.sharedState
 
     var body: some Scene {
         MenuBarExtra("FocusFollow", systemImage: appState.menuBarState.symbolName) {

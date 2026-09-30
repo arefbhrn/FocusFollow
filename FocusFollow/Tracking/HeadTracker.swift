@@ -39,7 +39,16 @@ final class HeadTracker {
     private(set) var activeCameraID: String?
 
     private(set) var rawPose: HeadPose?
-    private(set) var pose: HeadPose?
+    private(set) var pose: HeadPose? {
+        didSet {
+            let present = pose != nil
+            if present != hasFace { hasFace = present }
+        }
+    }
+
+    /// Changes only when a face appears or disappears. The menu and icon read this instead of `pose`,
+    /// which changes every frame and would re-render them continuously.
+    private(set) var hasFace = false
     private(set) var faceBox: CGRect?
     private(set) var imageSize = CGSize.zero
     private(set) var framesPerSecond = 0.0
