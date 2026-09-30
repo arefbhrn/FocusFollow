@@ -37,11 +37,11 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 - [x] Git repo + GitHub remote
 - [x] Roadmap
-- [ ] Xcode project (macOS App, SwiftUI), bundle ID `com.arefbhrn.focusfollow`
-- [ ] Signing with Personal Team (stable identity so permissions survive rebuilds)
-- [ ] Info.plist: `LSUIElement`, `NSCameraUsageDescription`
-- [ ] Entitlements: sandbox off, camera
-- [ ] README with build instructions
+- [x] Xcode project (macOS App, SwiftUI), bundle ID `com.arefbhrn.focusfollow`
+- [x] Signing with Personal Team (stable identity so permissions survive rebuilds)
+- [x] Info.plist: `LSUIElement`, `NSCameraUsageDescription`
+- [x] Entitlements: sandbox off, camera
+- [x] README with build instructions
 
 ## Phase 1 — Camera + head pose (prototype)
 
