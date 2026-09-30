@@ -31,6 +31,8 @@ struct DebugView: View {
 
             FocusReadout(focus: focus)
 
+            GazeMapView(focus: focus)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("Smoothing: \(tracker.smoothing, format: .number.precision(.fractionLength(2)))")
                 Slider(value: $tracker.smoothing, in: 0.05...1) {
@@ -223,5 +225,55 @@ private struct PosePad: View {
             x: size / 2 * (1 + clamp(pose.yaw)),
             y: size / 2 * (1 - clamp(pose.pitch))
         )
+    }
+}
+
+/// The classified screen as a rectangle, with the grid targets and the live gaze estimate.
+private struct GazeMapView: View {
+    let focus: FocusController
+    private let width = 240.0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Gaze map").bold()
+            if let gaze = focus.gaze, let display = focus.layout.display(withID: gaze.displayID) {
+                let height = width * display.bounds.height / max(display.bounds.width, 1)
+                ZStack(alignment: .topLeading) {
+                    Rectangle().fill(Color.secondary.opacity(0.12))
+                    Rectangle().strokeBorder(Color.secondary.opacity(0.5))
+                    ForEach(Array(targets(for: display.id).enumerated()), id: \.offset) { _, sample in
+                        Circle()
+                            .strokeBorder(Color.secondary, lineWidth: 1)
+                            .frame(width: 8, height: 8)
+                            .position(x: sample.x * width, y: sample.y * height)
+                    }
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 14, height: 14)
+                        .position(x: clamp(gaze.x) * width, y: clamp(gaze.y) * height)
+                }
+                .frame(width: width, height: height)
+                .clipShape(Rectangle())
+                Text("\(focus.layout.label(for: display.id)) · typical error \(focus.gazeModels[display.id]?.error ?? 0, format: .percent.precision(.fractionLength(0)))")
+                    .foregroundStyle(.secondary)
+            } else if focus.gazeModels.isEmpty {
+                Text("No gaze grid yet. Use Calibrate → Calibrate Gaze Grid.")
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Look at a screen with a gaze grid.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func targets(for id: String) -> [GridSample] {
+        focus.calibration?.screens.first { $0.id == id }?.grid ?? []
+    }
+
+    /// Keep the dot on the rectangle even when the estimate falls off the screen.
+    private func clamp(_ value: Double) -> Double {
+        min(max(value, -0.05), 1.05)
     }
 }

@@ -68,7 +68,7 @@ struct MenuContent: View {
     }
 
     private var lookingAtText: String? {
-        guard let result = appState.focus.evaluation?.result else { return nil }
+        guard let result = appState.focus.currentResult else { return nil }
         return "Looking at: \(appState.focus.label(for: result))"
     }
 

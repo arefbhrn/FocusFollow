@@ -12,10 +12,16 @@ struct CalibrationView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            switch session.phase {
-            case .idle: intro
-            case .settling, .collecting: progress
-            case .finished: summary
+            if focus.gridSession.isActive {
+                GridProgressView(session: focus.gridSession)
+            } else if focus.gridSession.phase == .finished {
+                GridSummaryView(focus: focus)
+            } else {
+                switch session.phase {
+                case .idle: intro
+                case .settling, .collecting: progress
+                case .finished: summary
+                }
             }
         }
         .padding(24)
@@ -23,6 +29,7 @@ struct CalibrationView: View {
         .background(WindowLevelSetter(level: .statusBar))
         .onDisappear {
             if session.isActive { session.cancel() }
+            if focus.gridSession.phase != .idle { focus.gridSession.cancel() }
         }
     }
 
@@ -47,6 +54,30 @@ struct CalibrationView: View {
                 Button("Start") { session.start(layout: focus.layout) }
                     .keyboardShortcut(.defaultAction)
                     .disabled(tracker.status != .running || focus.layout.displays.isEmpty)
+            }
+            Divider()
+            gridSection
+        }
+    }
+
+    private var gridSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Window focus (experimental)").font(.headline)
+            Text("Look at a grid of dots on each calibrated screen so FocusFollow can estimate where on the screen you're looking. Takes about \(Int(Double(GridCalibrationSession.targets.count) * (GridCalibrationSession.settleDuration + GridCalibrationSession.collectDuration))) seconds per screen.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            if focus.gridWasCleared {
+                Text("Recalibrating screens cleared the gaze grid. Calibrate it again to use window focus.")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+            }
+            if let message = focus.gridSession.message {
+                Text(message).foregroundStyle(.orange)
+            }
+            HStack {
+                Spacer()
+                Button("Calibrate Gaze Grid") { focus.startGridCalibration() }
+                    .disabled(tracker.status != .running || !focus.isCalibrated)
             }
         }
     }

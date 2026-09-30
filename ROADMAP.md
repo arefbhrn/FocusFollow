@@ -87,7 +87,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 5 — Same-screen window focus
 
-- [ ] Map pose to position within a screen (needs finer calibration: corners / grid)
+- [x] Map pose to position within a screen: 3×3 grid calibration, linear fit, live gaze map in the debug window (head pose only)
 - [ ] Pick window under the estimated gaze point from `CGWindowList`
 - [ ] Treat browsers / document windows as whole units (no focus stealing inside)
 - [ ] Hysteresis so focus doesn't flicker on window borders
