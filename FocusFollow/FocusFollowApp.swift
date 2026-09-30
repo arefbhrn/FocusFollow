@@ -5,7 +5,13 @@ struct FocusFollowApp: App {
     /// SwiftUI may rebuild the App struct, so the state lives in a static to be created exactly once.
     private static let sharedState: AppState = {
         SingleInstance.exitIfAnotherInstanceIsRunning()
-        return AppState()
+        let state = AppState()
+        #if DEBUG
+        if let directory = UISnapshot.requestedDirectory {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { UISnapshot.run(appState: state, into: directory) }
+        }
+        #endif
+        return state
     }()
 
     @State private var appState = FocusFollowApp.sharedState
@@ -14,6 +20,7 @@ struct FocusFollowApp: App {
         MenuBarExtra("FocusFollow", systemImage: appState.menuBarState.symbolName) {
             MenuContent(appState: appState)
         }
+        .menuBarExtraStyle(.window)
 
         Window("FocusFollow Debug", id: DebugView.windowID) {
             DebugView(tracker: appState.tracker, focus: appState.focus)
