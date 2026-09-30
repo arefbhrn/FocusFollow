@@ -3,7 +3,7 @@ import Observation
 import OSLog
 import SwiftUI
 
-/// Shows a dot at each point of a 3×3 grid on every calibrated screen and records the head pose for each.
+/// Shows a dot at each point of a 5×5 grid on every calibrated screen and records the head pose for each.
 @MainActor
 @Observable
 final class GridCalibrationSession {
@@ -15,10 +15,12 @@ final class GridCalibrationSession {
     }
 
     /// Margins keep the outer targets off the very edge of the screen, where people stop turning their head.
-    static let targets: [CGPoint] = [0.12, 0.5, 0.88].flatMap { y in
-        [0.12, 0.5, 0.88].map { CGPoint(x: $0, y: y) }
+    /// Rows alternate direction so the next dot is always next to the last one.
+    private static let gridPositions: [Double] = [0.12, 0.31, 0.5, 0.69, 0.88]
+    static let targets: [CGPoint] = gridPositions.enumerated().flatMap { row, y in
+        (row.isMultiple(of: 2) ? gridPositions : gridPositions.reversed()).map { CGPoint(x: $0, y: y) }
     }
-    static let settleDuration: TimeInterval = 1.0
+    static let settleDuration: TimeInterval = 0.9
     static let collectDuration: TimeInterval = 1.2
     static let minimumSamples = 6
     private static let tickInterval = Duration.milliseconds(66)
