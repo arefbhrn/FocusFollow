@@ -4,16 +4,18 @@ A macOS menu bar app that moves keyboard focus to the screen you're facing, usin
 
 Camera frames stay in memory on your Mac. Nothing is recorded or sent anywhere.
 
-## Features (v1)
+## Features
 
 - **Screen focus:** detects which display you're facing and focuses the last window you used there.
 - **Calibration:** look at each display for about 20 seconds. Calibration is saved per display arrangement, and FocusFollow asks you to recalibrate when you plug in or remove a monitor.
 - **Stays out of the way:** ignores quick glances, holds while you type or use the mouse, ignores looking away from every screen, and stops on sleep, lock and screen saver.
-- **Menu bar control:** pause and resume from the menu or with **⌃⌥⌘F**; the icon shows the current state.
-- **Settings:** glance delay, pause after typing, pause after mouse use, head-turn tolerance, cursor-follows-focus, camera choice, open at login.
+- **Menu bar popover:** see at a glance what FocusFollow is doing, whether the camera, Accessibility and calibration are fine (with a fix button when not), and pause or resume with the button or **⌃⌥⌘F**.
+- **Settings:** tabs for General, Switching, Windows and Displays: glance delay, pause after typing and mouse use, head-turn tolerance, cursor-follows-focus, camera, open at login.
+- **Window focus (experimental, off by default):** after a gaze grid calibration (25 dots per screen), looking at a window on the screen you're already on focuses it. The grid fit ignores bad dots, each dot is shown on a quality map, and screens where the estimate is too coarse are skipped. It relies on head direction, so it works best with large windows that don't overlap.
+- **Diagnostics:** a window that shows the camera, head direction, what FocusFollow thinks you're looking at, and the gaze map.
 - **Single instance:** launching it again just brings the running copy forward.
 
-Not in v1: focusing windows on the same screen and split panes. See [ROADMAP.md](ROADMAP.md).
+Not built yet: focusing split panes inside terminals and editors. See [ROADMAP.md](ROADMAP.md).
 
 ## Requirements
 
@@ -39,6 +41,8 @@ Or from the command line:
 xcodebuild -project FocusFollow.xcodeproj -scheme FocusFollow -configuration Debug -derivedDataPath build build
 open build/Build/Products/Debug/FocusFollow.app
 ```
+
+To see the windows without running the camera (Debug builds only), launch with `-snapshotDir /some/folder`: it writes light and dark PNGs of each window and quits.
 
 Only one copy can run at a time, so quit a running copy before starting a new build.
 

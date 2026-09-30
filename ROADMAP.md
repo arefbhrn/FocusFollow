@@ -33,7 +33,8 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ---
 
-> **v1.0.0** = Phases 0–4: multi-screen focus, pauses, settings. Phases 5–8 are post-v1.
+> **v1.0.0** = Phases 0–4: multi-screen focus, pauses, settings.
+> **v1.1.0** = Phase 5 (experimental same-screen window focus) plus a redesigned UI and the DMG background. Phases 6–8 are still ahead.
 
 ## Phase 0 — Project setup
 
@@ -112,7 +113,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 - [x] App icon (done in v1.0.0)
 - [ ] Menu bar glyph
-- [ ] DMG background image with an arrow from the app to Applications (`create-dmg --background`, update `scripts/make-dmg.sh`) — planned for the next release
+- [x] DMG background image with an arrow from the app to Applications (v1.1.0)
 - [ ] Onboarding (permissions → calibration → done)
 - [ ] CPU / battery tuning (lower fps when idle, stop camera when paused)
 - [ ] Release build zipped on GitHub Releases (unsigned; "Open Anyway" instructions)
