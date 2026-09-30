@@ -51,7 +51,7 @@ final class WindowTracker {
         remembered[display.id] = Remembered(pid: app.processIdentifier, window: window)
     }
 
-    /// Focuses the last window used on `display`, or the frontmost one there, and moves the cursor to it.
+    /// Focuses the last window used on `display`, or the frontmost one there, and moves the cursor to it if that setting is on.
     func focus(on display: DisplayInfo) {
         if let entry = remembered[display.id] {
             if focus(entry, on: display) { return }
@@ -61,7 +61,7 @@ final class WindowTracker {
             remembered[display.id] = entry
             return
         }
-        // Nothing visible to focus: only move the cursor, never activate or raise anything.
+        // Nothing visible to focus: at most move the cursor (when enabled), never activate or raise anything.
         Self.logger.info("No window to focus on \(display.id, privacy: .public)")
         warpCursor(to: CGPoint(x: display.bounds.midX, y: display.bounds.midY))
     }
@@ -133,6 +133,7 @@ final class WindowTracker {
     }
 
     private func warpCursor(to point: CGPoint) {
+        guard FocusSettings.moveCursor else { return }
         onWillWarpCursor()
         CGWarpMouseCursorPosition(point)
     }

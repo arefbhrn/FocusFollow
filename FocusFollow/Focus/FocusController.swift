@@ -77,6 +77,11 @@ final class FocusController {
         classifier != nil
     }
 
+    /// Whether the current display setup has a saved calibration for this display.
+    func isCalibrated(_ displayID: String) -> Bool {
+        calibration?.screens.contains { $0.id == displayID } ?? false
+    }
+
     /// Shows the system prompt and opens the Accessibility pane.
     func requestAccessibility() {
         AccessibilityPermission.requestPrompt()
@@ -151,6 +156,7 @@ final class FocusController {
         let hold = suspension ?? holdReasonProvider()
         if hold != holdReason { holdReason = hold }
 
+        classifier?.awayThreshold = FocusSettings.awayThreshold
         guard !session.isActive, let classifier else {
             clearClassification()
             return

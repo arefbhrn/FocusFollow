@@ -18,7 +18,7 @@ struct ScreenClassifier: Sendable {
     /// Floor for per-axis standard deviation in degrees, so a very steady calibration doesn't get brittle.
     var minimumStd = 2.0
     /// Beyond this normalized distance from every screen the pose counts as away.
-    var awayThreshold = 3.0
+    var awayThreshold = FocusSettings.defaultAwayThreshold
 
     init(stats: [String: ScreenStats]) {
         self.stats = stats

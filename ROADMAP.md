@@ -76,12 +76,12 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 4 — Settings
 
-- [ ] Dwell delay, typing pause, mouse pause sliders
-- [ ] Head-turn sensitivity
-- [ ] Toggle: move cursor with focus
-- [ ] Camera picker
-- [ ] Launch at login (`SMAppService`)
-- [ ] Recalibrate button + per-screen calibration status
+- [x] Dwell delay, typing pause, mouse pause sliders
+- [x] Head-turn sensitivity
+- [x] Toggle: move cursor with focus
+- [x] Camera picker
+- [x] Launch at login (`SMAppService`)
+- [x] Recalibrate button + per-screen calibration status
 
 ## Phase 5 — Same-screen window focus
 

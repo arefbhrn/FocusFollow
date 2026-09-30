@@ -48,6 +48,12 @@ struct MenuContent: View {
             NSApp.activate()
         }
 
+        Button("Settings…") {
+            openWindow(id: SettingsView.windowID)
+            NSApp.activate()
+        }
+        .keyboardShortcut(",")
+
         Button("Show Debug Window") {
             openWindow(id: DebugView.windowID)
             NSApp.activate()

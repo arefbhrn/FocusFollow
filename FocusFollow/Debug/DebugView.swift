@@ -9,7 +9,7 @@ struct DebugView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            cameraPicker
+            CameraPicker(tracker: tracker)
 
             ZStack {
                 Color.black
@@ -45,22 +45,6 @@ struct DebugView: View {
         }
         .padding(20)
         .frame(width: 520)
-    }
-
-    private var cameraPicker: some View {
-        Picker("Camera", selection: cameraSelection) {
-            ForEach(tracker.cameras) { camera in
-                Text(camera.name).tag(camera.id)
-            }
-        }
-        .disabled(tracker.cameras.isEmpty)
-    }
-
-    private var cameraSelection: Binding<String> {
-        Binding(
-            get: { tracker.activeCameraID ?? tracker.selectedCameraID ?? "" },
-            set: { tracker.selectedCameraID = $0 }
-        )
     }
 }
 
