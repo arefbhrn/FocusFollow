@@ -10,7 +10,7 @@ struct FocusFollowApp: App {
         }
 
         Window("FocusFollow Debug", id: DebugView.windowID) {
-            DebugView(tracker: appState.tracker)
+            DebugView(tracker: appState.tracker, focus: appState.focus)
         }
         .windowResizability(.contentSize)
 

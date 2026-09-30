@@ -5,6 +5,7 @@ struct DebugView: View {
     static let windowID = "debug"
 
     @Bindable var tracker: HeadTracker
+    let focus: FocusController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -27,6 +28,8 @@ struct DebugView: View {
                 Spacer()
                 PosePad(pose: tracker.pose)
             }
+
+            FocusReadout(focus: focus)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Smoothing: \(tracker.smoothing, format: .number.precision(.fractionLength(2)))")
@@ -124,6 +127,36 @@ private struct FaceBoxOverlay: View {
             width: fitted.width,
             height: fitted.height
         )
+    }
+}
+
+private struct FocusReadout: View {
+    let focus: FocusController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Focus").bold()
+            Text("Accessibility: \(focus.accessibilityTrusted ? "granted" : "not granted")")
+            if focus.calibration == nil {
+                Text("Not calibrated for this display setup")
+            } else if let evaluation = focus.evaluation {
+                Text("Now: \(focus.label(for: evaluation.result))")
+                Text("Confirmed: \(focus.confirmed.map { focus.label(for: $0) } ?? "—")")
+                Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 2) {
+                    ForEach(evaluation.distances.sorted { $0.key < $1.key }, id: \.key) { entry in
+                        GridRow {
+                            Text(focus.layout.label(for: entry.key))
+                                .gridColumnAlignment(.leading)
+                            Text(entry.value, format: .number.precision(.fractionLength(2)))
+                        }
+                    }
+                }
+            } else {
+                Text("No face")
+            }
+        }
+        .font(.system(.caption, design: .monospaced))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
