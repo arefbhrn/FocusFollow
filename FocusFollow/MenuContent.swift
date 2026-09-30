@@ -11,7 +11,8 @@ struct MenuContent: View {
             Text(lookingAt)
         }
 
-        if let hold = appState.focus.holdReason {
+        // Pause and suspension are already in the status line; only show input holds here.
+        if appState.focus.suspension == nil, let hold = appState.focus.holdReason {
             Text(hold.label)
         }
 
@@ -73,8 +74,7 @@ struct MenuContent: View {
 
     private var statusText: String {
         if appState.isUserPaused { return "FocusFollow is paused" }
-        if appState.isSystemSuspended, let reason = appState.focus.suspension { return reason.label }
-        if appState.isSystemSuspended { return "Suspended — \(appState.focus.suspension?.label ?? "system")" }
+        if appState.isSystemSuspended { return appState.focus.suspension?.label ?? "Suspended" }
         switch appState.tracker.status {
         case .stopped, .requestingPermission: return "Starting…"
         case .permissionDenied: return "No camera permission"
