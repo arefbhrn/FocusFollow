@@ -19,6 +19,8 @@ final class FocusController {
     private(set) var evaluation: ScreenClassifier.Evaluation?
     /// Classification that has been stable for the dwell delay.
     private(set) var confirmed: ScreenClassifier.Result?
+    /// The display setup changed to one with no saved calibration. Cleared once it is calibrated.
+    private(set) var hasNewDisplaySetup = false
     let session: CalibrationSession
 
     /// Why switching is held right now, or `nil` when free to switch. Updated every tick.
@@ -100,6 +102,7 @@ final class FocusController {
         guard calibration.arrangementKey == layout.key else { return }
         CalibrationStore.save(calibration)
         self.calibration = calibration
+        hasNewDisplaySetup = false
         rebuildClassifier()
     }
 
@@ -123,6 +126,7 @@ final class FocusController {
         layout = newLayout
         windows.layout = newLayout
         loadCalibration()
+        hasNewDisplaySetup = calibration == nil
     }
 
     // MARK: - Loop

@@ -11,7 +11,11 @@ struct MenuContent: View {
             Text(lookingAt)
         }
 
-        Text(calibrationText)
+        if appState.focus.hasNewDisplaySetup {
+            Text("New display setup — calibration needed")
+        } else {
+            Text(calibrationText)
+        }
 
         if !appState.focus.accessibilityTrusted {
             Text("Accessibility access needed")
@@ -34,7 +38,7 @@ struct MenuContent: View {
         // Shown for reference; the actual shortcut is the global hotkey, which also works while the menu is closed.
         .keyboardShortcut(HotKeyConfig.keyEquivalent, modifiers: HotKeyConfig.eventModifiers)
 
-        Button("Calibrate…") {
+        Button(appState.focus.hasNewDisplaySetup ? "New Display Setup — Calibrate…" : "Calibrate…") {
             openWindow(id: CalibrationView.windowID)
             NSApp.activate()
         }
