@@ -22,7 +22,7 @@ struct FocusFollowApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("FocusFollow Debug", id: DebugView.windowID) {
+        Window("FocusFollow Diagnostics", id: DebugView.windowID) {
             DebugView(tracker: appState.tracker, focus: appState.focus)
         }
         .windowResizability(.contentSize)

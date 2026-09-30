@@ -8,7 +8,9 @@ struct DebugView: View {
     let focus: FocusController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
+            WindowHeader(symbol: "waveform.path.ecg", title: "Diagnostics", subtitle: "See what FocusFollow sees. Useful for checking your setup and calibration.")
+
             CameraPicker(tracker: tracker)
 
             ZStack {
@@ -20,33 +22,51 @@ struct DebugView: View {
                     StatusMessage(status: tracker.status)
                 }
             }
-            .frame(width: 480, height: 270)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(height: 270)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.m, style: .continuous))
+            .accessibilityLabel("Camera preview")
 
-            HStack(alignment: .top, spacing: 24) {
-                PoseReadout(tracker: tracker)
-                Spacer()
-                PosePad(pose: tracker.pose)
+            HStack(alignment: .top, spacing: Theme.Space.m) {
+                Card(padding: Theme.Space.m) { PoseReadout(tracker: tracker) }
+                Card(padding: Theme.Space.m) {
+                    VStack(spacing: Theme.Space.s) {
+                        PosePad(pose: tracker.pose)
+                        Text("Head direction").font(.caption).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .frame(width: 168)
             }
 
-            FocusReadout(focus: focus)
+            Card { FocusReadout(focus: focus) }
 
-            GazeMapView(focus: focus)
+            Card { GazeMapView(focus: focus) }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Smoothing: \(tracker.smoothing, format: .number.precision(.fractionLength(2)))")
-                Slider(value: $tracker.smoothing, in: 0.05...1) {
-                    EmptyView()
-                } minimumValueLabel: {
-                    Text("Smooth")
-                } maximumValueLabel: {
-                    Text("Fast")
+            Card(padding: Theme.Space.m) {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    HStack {
+                        Text("Smoothing").font(.callout)
+                        Spacer()
+                        Text(tracker.smoothing, format: .number.precision(.fractionLength(2)))
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $tracker.smoothing, in: 0.05...1) {
+                        Text("Smoothing")
+                    } minimumValueLabel: {
+                        Text("Smooth").font(.caption)
+                    } maximumValueLabel: {
+                        Text("Fast").font(.caption)
+                    }
+                    .labelsHidden()
+                    Text("Smoother reacts more slowly. Faster reacts to every small movement.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .font(.caption)
         }
-        .padding(20)
-        .frame(width: 520)
+        .padding(Theme.Space.xl)
+        .frame(width: 560)
     }
 }
 
@@ -54,7 +74,11 @@ private struct StatusMessage: View {
     let status: HeadTracker.Status
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Theme.Space.m) {
+            Image(systemName: "video.slash")
+                .font(.system(size: 28))
+                .foregroundStyle(.white.opacity(0.7))
+                .accessibilityHidden(true)
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
@@ -62,6 +86,7 @@ private struct StatusMessage: View {
                 Button("Open Camera Settings") {
                     CameraPermission.openSettings()
                 }
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding()
@@ -120,32 +145,55 @@ private struct FocusReadout: View {
     let focus: FocusController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Focus").bold()
-            Text("Accessibility: \(focus.accessibilityTrusted ? "granted" : "not granted")")
-            Text("Switching: \(focus.holdReason?.label ?? "free")")
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            Text("Focus").font(.headline)
+            StatusRow(
+                symbol: "hand.raised",
+                title: "Accessibility",
+                status: focus.accessibilityTrusted ? .ok : .warning,
+                detail: focus.accessibilityTrusted ? "Allowed" : "Not allowed"
+            )
+            StatusRow(
+                symbol: "arrow.left.arrow.right",
+                title: "Switching",
+                status: focus.holdReason == nil ? .ok : .neutral,
+                detail: focus.holdReason?.label ?? "Ready"
+            )
             if FocusSettings.windowFocus {
-                Text("Window under gaze: \(focus.targetWindowLabel ?? "—")")
+                StatusRow(
+                    symbol: "macwindow",
+                    title: "Window under gaze",
+                    status: focus.targetWindowLabel == nil ? .neutral : .ok,
+                    detail: focus.targetWindowLabel ?? "None"
+                )
             }
+            Divider()
             if focus.calibration == nil {
-                Text("Not calibrated for this display setup")
+                Label("Not calibrated for this display setup", systemImage: Theme.Status.warning.symbol)
+                    .foregroundStyle(Theme.Status.warning.color)
+                    .font(.callout)
             } else if let evaluation = focus.evaluation {
-                Text("Now: \(focus.label(for: evaluation.result))")
-                Text("Confirmed: \(focus.confirmed.map { focus.label(for: $0) } ?? "—")")
-                Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 2) {
+                LabeledContent("Now") { Text(focus.label(for: evaluation.result)) }
+                LabeledContent("Confirmed") { Text(focus.confirmed.map { focus.label(for: $0) } ?? "—") }
+                Grid(alignment: .trailing, horizontalSpacing: Theme.Space.l, verticalSpacing: 2) {
                     ForEach(evaluation.distances.sorted { $0.key < $1.key }, id: \.key) { entry in
                         GridRow {
                             Text(focus.layout.label(for: entry.key))
+                                .foregroundStyle(.secondary)
                                 .gridColumnAlignment(.leading)
                             Text(entry.value, format: .number.precision(.fractionLength(2)))
+                                .monospacedDigit()
                         }
                     }
                 }
+                .font(.caption)
             } else {
-                Text("No face")
+                Label("No face in view", systemImage: Theme.Status.neutral.symbol)
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
             }
         }
-        .font(.system(.caption, design: .monospaced))
+        .font(.callout)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -177,7 +225,7 @@ private struct PoseReadout: View {
                     .gridCellAnchor(.leading)
             }
         }
-        .font(.system(.body, design: .monospaced))
+        .font(.system(.callout, design: .rounded).monospacedDigit())
     }
 
     private func row(_ label: String, _ angle: KeyPath<HeadPose, Double>) -> some View {
@@ -203,7 +251,7 @@ private struct PosePad: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: Theme.Radius.s)
                 .stroke(.secondary.opacity(0.5))
             Path { path in
                 path.move(to: CGPoint(x: size / 2, y: 0))
@@ -214,8 +262,8 @@ private struct PosePad: View {
             .stroke(.secondary.opacity(0.3))
             if let pose {
                 Circle()
-                    .fill(.green)
-                    .frame(width: 10, height: 10)
+                    .fill(Color.accentColor)
+                    .frame(width: 12, height: 12)
                     .position(point(for: pose))
             }
         }
@@ -238,7 +286,7 @@ private struct GazeMapView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Gaze map").bold()
+            Text("Gaze map").font(.headline)
             if let gaze = focus.gaze, let display = focus.layout.display(withID: gaze.displayID) {
                 GridQualityMap(
                     grid: targets(for: display.id),
