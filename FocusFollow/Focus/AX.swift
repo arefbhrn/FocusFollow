@@ -21,7 +21,7 @@ enum AX {
         guard let windows = copy(application(pid: pid), kAXWindowsAttribute) as? [AnyObject] else { return [] }
         return windows.compactMap { item in
             guard CFGetTypeID(item) == AXUIElementGetTypeID() else { return nil }
-            let window = unsafeBitCast(item, to: AXUIElement.self)
+            let window = unsafeDowncast(item, to: AXUIElement.self)
             AXUIElementSetMessagingTimeout(window, messagingTimeout)
             return window
         }
@@ -35,8 +35,8 @@ enum AX {
               CFGetTypeID(sizeValue) == AXValueGetTypeID() else { return nil }
         var position = CGPoint.zero
         var size = CGSize.zero
-        guard AXValueGetValue(unsafeBitCast(positionValue, to: AXValue.self), .cgPoint, &position),
-              AXValueGetValue(unsafeBitCast(sizeValue, to: AXValue.self), .cgSize, &size) else { return nil }
+        guard AXValueGetValue(unsafeDowncast(positionValue, to: AXValue.self), .cgPoint, &position),
+              AXValueGetValue(unsafeDowncast(sizeValue, to: AXValue.self), .cgSize, &size) else { return nil }
         return CGRect(origin: position, size: size)
     }
 
@@ -53,7 +53,7 @@ enum AX {
 
     private static func element(_ parent: AXUIElement, _ attribute: String) -> AXUIElement? {
         guard let value = copy(parent, attribute), CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
-        let element = unsafeBitCast(value, to: AXUIElement.self)
+        let element = unsafeDowncast(value, to: AXUIElement.self)
         AXUIElementSetMessagingTimeout(element, messagingTimeout)
         return element
     }
