@@ -6,14 +6,26 @@ import SwiftUI
 /// Run the app with `-snapshotDir /some/folder`; it writes light and dark images of each window and quits.
 @MainActor
 enum UISnapshot {
+    /// Only the command-line argument counts, not a value saved in the app's defaults.
     static var requestedDirectory: URL? {
-        UserDefaults.standard.string(forKey: "snapshotDir").map { URL(fileURLWithPath: $0, isDirectory: true) }
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let flag = arguments.firstIndex(of: "-snapshotDir"), arguments.indices.contains(flag + 1) else { return nil }
+        return URL(fileURLWithPath: (arguments[flag + 1] as NSString).standardizingPath, isDirectory: true)
     }
 
     static func run(appState: AppState, into directory: URL) {
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        } catch {
+            NSLog("UISnapshot: cannot create %@: %@", directory.path, error.localizedDescription)
+            NSApp.terminate(nil)
+            return
+        }
         let screens: [(String, AnyView)] = [
-            ("settings", AnyView(SettingsView(tracker: appState.tracker, focus: appState.focus))),
+            ("settings-general", AnyView(SettingsView(tracker: appState.tracker, focus: appState.focus, tab: .general))),
+            ("settings-switching", AnyView(SettingsView(tracker: appState.tracker, focus: appState.focus, tab: .switching))),
+            ("settings-windows", AnyView(SettingsView(tracker: appState.tracker, focus: appState.focus, tab: .windows))),
+            ("settings-displays", AnyView(SettingsView(tracker: appState.tracker, focus: appState.focus, tab: .displays))),
             ("calibration", AnyView(CalibrationView(focus: appState.focus, tracker: appState.tracker))),
             ("debug", AnyView(DebugView(tracker: appState.tracker, focus: appState.focus))),
             ("menu", AnyView(MenuContent(appState: appState))),
@@ -55,7 +67,11 @@ enum UISnapshot {
 
     private static func write(_ rep: NSBitmapImageRep?, to url: URL) {
         guard let data = rep?.representation(using: .png, properties: [:]) else { return }
-        try? data.write(to: url)
+        do {
+            try data.write(to: url)
+        } catch {
+            NSLog("UISnapshot: cannot write %@: %@", url.path, error.localizedDescription)
+        }
     }
 }
 #endif
