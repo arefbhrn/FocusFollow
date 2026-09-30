@@ -33,6 +33,8 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ---
 
+> **v1.0.0** = Phases 0–4: multi-screen focus, pauses, settings. Phases 5–8 are post-v1.
+
 ## Phase 0 — Project setup
 
 - [x] Git repo + GitHub remote
