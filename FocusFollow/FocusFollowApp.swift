@@ -13,5 +13,10 @@ struct FocusFollowApp: App {
             DebugView(tracker: appState.tracker)
         }
         .windowResizability(.contentSize)
+
+        Window("Calibrate FocusFollow", id: CalibrationView.windowID) {
+            CalibrationView(focus: appState.focus, tracker: appState.tracker)
+        }
+        .windowResizability(.contentSize)
     }
 }

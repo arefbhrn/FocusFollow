@@ -32,6 +32,11 @@ struct MenuContent: View {
             appState.isPaused.toggle()
         }
 
+        Button("Calibrate…") {
+            openWindow(id: CalibrationView.windowID)
+            NSApp.activate()
+        }
+
         Button("Show Debug Window") {
             openWindow(id: DebugView.windowID)
             NSApp.activate()

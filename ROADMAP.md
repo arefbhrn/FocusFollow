@@ -56,7 +56,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 ## Phase 2 — Multi-screen focus (MVP)
 
 - [x] Read display layout from `NSScreen`
-- [ ] Calibration flow: look at each screen ~20 s, store pose samples per screen
+- [x] Calibration flow: look at each screen ~20 s, store pose samples per screen
 - [x] Classifier: current pose → nearest screen, or "away" when outside all regions
 - [x] Dwell delay (default 300 ms) to ignore quick glances
 - [x] Track last focused window per screen
