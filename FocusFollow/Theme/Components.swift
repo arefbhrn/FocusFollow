@@ -16,14 +16,21 @@ struct IconBadge: View {
     }
 }
 
-/// An icon, a label and a status, optionally with a button to fix a problem.
+/// An icon, a label and a status. When something needs fixing and a fix is offered, a button replaces nothing:
+/// the status stays visible under the title and the button sits at the end.
 struct StatusRow: View {
     let symbol: String
     let title: String
     let status: Theme.Status
     let detail: String
     var fixTitle: String?
+    /// What VoiceOver reads for the fix button, since its visible title is short.
+    var fixAccessibilityLabel: String?
     var fix: (() -> Void)?
+
+    private var showsFix: Bool {
+        fix != nil && fixTitle != nil && (status == .warning || status == .problem)
+    }
 
     var body: some View {
         HStack(spacing: Theme.Space.s) {
@@ -31,24 +38,37 @@ struct StatusRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
                 .accessibilityHidden(true)
-            Text(title)
-            Spacer(minLength: Theme.Space.s)
-            if let fixTitle, let fix, status != .ok {
-                Button(fixTitle, action: fix)
-                    .controlSize(.small)
-            } else {
-                HStack(spacing: Theme.Space.xs) {
-                    Image(systemName: status.symbol)
-                        .foregroundStyle(status.color)
-                        .accessibilityHidden(true)
-                    Text(detail)
-                        .foregroundStyle(.secondary)
+            if showsFix {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                    statusLabel.font(.caption)
                 }
-                .font(.callout)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(title): \(detail)")
+                Spacer(minLength: Theme.Space.s)
+                if let fixTitle, let fix {
+                    Button(fixTitle, action: fix)
+                        .controlSize(.small)
+                        .accessibilityLabel(fixAccessibilityLabel ?? fixTitle)
+                }
+            } else {
+                Text(title)
+                Spacer(minLength: Theme.Space.s)
+                statusLabel.font(.callout)
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): \(detail)")
+        .accessibilityElement(children: showsFix ? .contain : .combine)
+        .accessibilityLabel(showsFix ? Text(verbatim: "") : Text("\(title): \(detail)"))
+    }
+
+    private var statusLabel: some View {
+        HStack(spacing: Theme.Space.xs) {
+            Image(systemName: status.symbol)
+                .foregroundStyle(status.color)
+                .accessibilityHidden(true)
+            Text(detail)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
@@ -73,10 +93,11 @@ struct Card<Content: View>: View {
 struct ActionTile: View {
     let symbol: String
     let title: String
+    var shortcut: KeyEquivalent?
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        let button = Button(action: action) {
             VStack(spacing: Theme.Space.xs) {
                 Image(systemName: symbol)
                     .font(.system(size: 16, weight: .medium))
@@ -87,24 +108,38 @@ struct ActionTile: View {
             .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(TileButtonStyle())
+        if let shortcut {
+            button.keyboardShortcut(shortcut)
+        } else {
+            button
+        }
     }
 }
 
 /// Rounded-rectangle button surface with hover and pressed states, matching `Card`'s shape.
 struct TileButtonStyle: ButtonStyle {
-    @State private var hovering = false
-    @Environment(\.isEnabled) private var isEnabled
-
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.m, style: .continuous)
-                    .fill(Color.primary.opacity(configuration.isPressed ? 0.16 : hovering ? 0.11 : 0.07))
-            )
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.m, style: .continuous))
-            .onHover { hovering = $0 }
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-            .animation(.easeOut(duration: 0.12), value: hovering)
+        TileSurface(configuration: configuration)
+    }
+
+    /// Owns the hover state so it resets when the view goes away, for example when the popover closes under the cursor.
+    private struct TileSurface: View {
+        let configuration: ButtonStyle.Configuration
+        @State private var hovering = false
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Radius.m, style: .continuous)
+                        .fill(Color.primary.opacity(configuration.isPressed ? 0.16 : hovering ? 0.11 : 0.07))
+                )
+                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.m, style: .continuous))
+                .onHover { hovering = $0 }
+                .onDisappear { hovering = false }
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .animation(.easeOut(duration: 0.12), value: hovering)
+        }
     }
 }

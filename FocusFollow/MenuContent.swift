@@ -68,7 +68,9 @@ struct MenuContent: View {
                     status: cameraStatus.kind,
                     detail: cameraStatus.text,
                     fixTitle: "Allow…",
-                    fix: { CameraPermission.openSettings() }
+                    fixAccessibilityLabel: "Allow camera access",
+                    // Only a denied permission is fixed in Privacy settings; a missing or failed camera is not.
+                    fix: appState.tracker.status == .permissionDenied ? { CameraPermission.openSettings() } : nil
                 )
                 Divider()
                 StatusRow(
@@ -77,6 +79,7 @@ struct MenuContent: View {
                     status: appState.focus.accessibilityTrusted ? .ok : .warning,
                     detail: appState.focus.accessibilityTrusted ? "Allowed" : "Needed",
                     fixTitle: "Allow…",
+                    fixAccessibilityLabel: "Allow Accessibility access",
                     fix: { appState.focus.requestAccessibility() }
                 )
                 Divider()
@@ -86,6 +89,7 @@ struct MenuContent: View {
                     status: calibrationStatus.kind,
                     detail: calibrationStatus.text,
                     fixTitle: "Calibrate…",
+                    fixAccessibilityLabel: "Calibrate displays",
                     fix: { open(CalibrationView.windowID) }
                 )
             }
@@ -131,8 +135,7 @@ struct MenuContent: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        // Shown for reference; the actual shortcut is the global hotkey, which also works while the popover is closed.
-        .keyboardShortcut(HotKeyConfig.keyEquivalent, modifiers: HotKeyConfig.eventModifiers)
+        // The shortcut is the global hotkey, which works while the popover is closed; it is only named here.
         .help("\(appState.isUserPaused ? "Resume" : "Pause") (\(HotKeyConfig.displayString))")
     }
 
@@ -140,7 +143,7 @@ struct MenuContent: View {
         VStack(spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.s) {
                 ActionTile(symbol: "viewfinder", title: "Calibrate") { open(CalibrationView.windowID) }
-                ActionTile(symbol: "gearshape", title: "Settings") { open(SettingsView.windowID) }
+                ActionTile(symbol: "gearshape", title: "Settings", shortcut: ",") { open(SettingsView.windowID) }
                 ActionTile(symbol: "waveform.path.ecg", title: "Diagnostics") { open(DebugView.windowID) }
             }
             HStack {
@@ -149,13 +152,18 @@ struct MenuContent: View {
                     .buttonStyle(.plain)
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                    .padding(.vertical, Theme.Space.xs)
+                    .contentShape(Rectangle())
                     .keyboardShortcut("q")
             }
         }
     }
 
     private func open(_ id: String) {
+        // The popover is an NSPanel; close it so it doesn't stay open over the window being opened.
+        let popover = NSApp.keyWindow as? NSPanel
         openWindow(id: id)
         NSApp.activate()
+        popover?.orderOut(nil)
     }
 }
