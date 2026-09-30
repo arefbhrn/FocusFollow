@@ -28,8 +28,8 @@ struct MenuContent: View {
 
         Divider()
 
-        Button(appState.isPaused ? "Resume" : "Pause") {
-            appState.isPaused.toggle()
+        Button(appState.isUserPaused ? "Resume" : "Pause") {
+            appState.isUserPaused.toggle()
         }
 
         Button("Calibrate…") {
@@ -62,7 +62,9 @@ struct MenuContent: View {
     }
 
     private var statusText: String {
-        if appState.isPaused { return "FocusFollow is paused" }
+        if appState.isUserPaused { return "FocusFollow is paused" }
+        if appState.isSystemSuspended, let reason = appState.focus.suspension { return reason.label }
+        if appState.isSystemSuspended { return "Suspended — \(appState.focus.suspension?.label ?? "system")" }
         switch appState.tracker.status {
         case .stopped, .requestingPermission: return "Starting…"
         case .permissionDenied: return "No camera permission"
