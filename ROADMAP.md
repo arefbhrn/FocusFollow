@@ -66,9 +66,9 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 3 — Don't get in the way
 
-- [ ] Pause after typing (default 3 s since last keystroke)
-- [ ] Pause after mouse / trackpad activity (default 1.5 s)
-- [ ] Ignore "away" poses (phone, ceiling, desk)
+- [x] Pause after typing (default 3 s since last keystroke)
+- [x] Pause after mouse / trackpad activity (default 1.5 s)
+- [x] Ignore "away" poses (phone, ceiling, desk)
 - [ ] Pause on sleep, screen lock, screensaver
 - [ ] Global pause / resume hotkey (⇧⌘G or configurable)
 - [ ] Menu bar icon reflects state (active / paused / no face / no permission)

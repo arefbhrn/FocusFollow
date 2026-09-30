@@ -9,8 +9,8 @@ final class FocusController {
     private static let logger = Logger(subsystem: "com.arefbhrn.focusfollow", category: "focus")
     private static let tickInterval = Duration.milliseconds(66)
 
-    /// Set by `AppState`.
-    var isPaused = false
+    /// Set by `AppState` while the user paused or the system is asleep / locked. Holds all switching.
+    var suspension: HoldReason?
 
     private(set) var layout: DisplayLayout
     private(set) var calibration: Calibration?
@@ -21,8 +21,11 @@ final class FocusController {
     private(set) var confirmed: ScreenClassifier.Result?
     let session: CalibrationSession
 
-    /// Extra condition for switching, e.g. typing and mouse activity in Phase 3. Return `false` to hold focus.
-    @ObservationIgnored var switchingGate: @MainActor () -> Bool = { true }
+    /// Why switching is held right now, or `nil` when free to switch. Updated every tick.
+    private(set) var holdReason: HoldReason?
+
+    /// Extra condition for switching, e.g. recent typing or mouse activity. Return a reason to hold focus.
+    @ObservationIgnored var holdReasonProvider: @MainActor () -> HoldReason? = { nil }
 
     @ObservationIgnored private let tracker: HeadTracker
     @ObservationIgnored private let windows: WindowTracker
@@ -30,14 +33,19 @@ final class FocusController {
     @ObservationIgnored private var dwell = DwellFilter(delay: FocusSettings.dwellDelay)
     @ObservationIgnored private var loopTask: Task<Void, Never>?
     @ObservationIgnored private var screenObserver: NSObjectProtocol?
+    /// Screen confirmed by the dwell filter whose switch was held back; retried while the user keeps looking at it.
+    @ObservationIgnored private var pendingSwitch: String?
+    @ObservationIgnored var onAccessibilityTrustChange: @MainActor (Bool) -> Void = { _ in }
     @ObservationIgnored private var lastTrustCheck = 0.0
     @ObservationIgnored private var lastWindowPoll = 0.0
 
-    init(tracker: HeadTracker) {
+    init(tracker: HeadTracker, activity: ActivityMonitor) {
         self.tracker = tracker
         let layout = DisplayLayout.current()
         self.layout = layout
-        windows = WindowTracker(layout: layout)
+        let windows = WindowTracker(layout: layout)
+        windows.onWillWarpCursor = { [activity] in activity.noteCursorWarp() }
+        self.windows = windows
         session = CalibrationSession(tracker: tracker)
         accessibilityTrusted = AccessibilityPermission.isTrusted
 
@@ -104,6 +112,7 @@ final class FocusController {
         dwell.reset()
         evaluation = nil
         confirmed = nil
+        pendingSwitch = nil
     }
 
     private func screensChanged() {
@@ -125,12 +134,18 @@ final class FocusController {
         if now - lastTrustCheck >= 2 {
             lastTrustCheck = now
             let trusted = AccessibilityPermission.isTrusted
-            if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+            if trusted != accessibilityTrusted {
+                accessibilityTrusted = trusted
+                onAccessibilityTrustChange(trusted)
+            }
         }
         if accessibilityTrusted, now - lastWindowPoll >= 0.25 {
             lastWindowPoll = now
             windows.poll()
         }
+
+        let hold = suspension ?? holdReasonProvider()
+        if hold != holdReason { holdReason = hold }
 
         guard !session.isActive, let classifier else {
             clearClassification()
@@ -145,21 +160,35 @@ final class FocusController {
         let latest = classifier.evaluate(pose)
         evaluation = latest
         dwell.delay = FocusSettings.dwellDelay
-        guard let newlyConfirmed = dwell.update(latest.result, at: now) else { return }
-        confirmed = newlyConfirmed
-        if case .screen(let id) = newlyConfirmed {
-            switchIfNeeded(to: id)
+        if let newlyConfirmed = dwell.update(latest.result, at: now) {
+            confirmed = newlyConfirmed
+            // Only a screen triggers a switch; `.away` (phone, ceiling, desk) never does.
+            if case .screen(let id) = newlyConfirmed {
+                pendingSwitch = id
+            } else {
+                pendingSwitch = nil
+            }
         }
+
+        guard let id = pendingSwitch else { return }
+        guard latest.result == .screen(id) else {
+            pendingSwitch = nil
+            return
+        }
+        guard holdReason == nil else { return }
+        pendingSwitch = nil
+        switchIfNeeded(to: id)
     }
 
     private func clearClassification() {
         if evaluation != nil { evaluation = nil }
         if confirmed != nil { confirmed = nil }
+        pendingSwitch = nil
         dwell.reset()
     }
 
     private func switchIfNeeded(to id: String) {
-        guard !isPaused, accessibilityTrusted, switchingGate(),
+        guard accessibilityTrusted,
               let display = layout.display(withID: id) else { return }
         windows.poll()
         guard windows.focusedDisplayID != id else { return }

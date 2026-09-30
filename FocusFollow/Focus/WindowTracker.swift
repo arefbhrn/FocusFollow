@@ -15,6 +15,8 @@ final class WindowTracker {
     var layout: DisplayLayout
     /// Display of the frontmost app's focused window, as of the last `poll()`. `nil` if unknown or it's our own window.
     private(set) var focusedDisplayID: String?
+    /// Called right before the cursor is warped, so input monitors can ignore our own movement.
+    var onWillWarpCursor: @MainActor () -> Void = {}
 
     private var remembered: [String: Remembered] = [:]
     private var observer: NSObjectProtocol?
@@ -109,6 +111,7 @@ final class WindowTracker {
     }
 
     private func warpCursor(to point: CGPoint) {
+        onWillWarpCursor()
         CGWarpMouseCursorPosition(point)
     }
 }
