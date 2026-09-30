@@ -31,6 +31,8 @@ struct MenuContent: View {
         Button(appState.isUserPaused ? "Resume" : "Pause") {
             appState.isUserPaused.toggle()
         }
+        // Shown for reference; the actual shortcut is the global hotkey, which also works while the menu is closed.
+        .keyboardShortcut(HotKeyConfig.keyEquivalent, modifiers: HotKeyConfig.eventModifiers)
 
         Button("Calibrate…") {
             openWindow(id: CalibrationView.windowID)

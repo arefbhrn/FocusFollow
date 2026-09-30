@@ -24,6 +24,7 @@ final class AppState {
     }
 
     @ObservationIgnored private let systemState: SystemStateMonitor
+    @ObservationIgnored private var pauseHotKey: GlobalHotKey?
 
     var isSystemSuspended: Bool {
         !systemSuspensions.isEmpty
@@ -48,6 +49,9 @@ final class AppState {
 
         systemState.onChange = { [weak self] active in
             self?.systemSuspensions = active
+        }
+        pauseHotKey = GlobalHotKey(keyCode: HotKeyConfig.keyCode, modifiers: HotKeyConfig.modifiers) { [weak self] in
+            self?.isUserPaused.toggle()
         }
         Task { [tracker] in await tracker.start() }
     }

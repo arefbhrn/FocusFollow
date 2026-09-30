@@ -70,7 +70,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 - [x] Pause after mouse / trackpad activity (default 1.5 s)
 - [x] Ignore "away" poses (phone, ceiling, desk)
 - [x] Pause on sleep, screen lock, screensaver
-- [ ] Global pause / resume hotkey (⇧⌘G or configurable)
+- [x] Global pause / resume hotkey (default ⌃⌥⌘F, configurable later; ⇧⌘G collides with "Go to Folder" / "Find Previous")
 - [ ] Menu bar icon reflects state (active / paused / no face / no permission)
 - [ ] Re-detect display changes (plug / unplug monitor) and prompt recalibration
 
