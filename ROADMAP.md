@@ -110,7 +110,9 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 8 — Polish + sharing
 
-- [ ] App icon + menu bar glyph
+- [x] App icon (done in v1.0.0)
+- [ ] Menu bar glyph
+- [ ] DMG background image with an arrow from the app to Applications (`create-dmg --background`, update `scripts/make-dmg.sh`) — planned for the next release
 - [ ] Onboarding (permissions → calibration → done)
 - [ ] CPU / battery tuning (lower fps when idle, stop camera when paused)
 - [ ] Release build zipped on GitHub Releases (unsigned; "Open Anyway" instructions)
