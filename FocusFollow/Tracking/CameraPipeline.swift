@@ -1,5 +1,6 @@
 import AVFoundation
 import OSLog
+import os
 import Vision
 
 private let logger = Logger(subsystem: "com.arefbhrn.focusfollow", category: "camera")
@@ -27,6 +28,13 @@ final class CameraPipeline: NSObject, @unchecked Sendable {
 
     let session = AVCaptureSession()
 
+    /// Also find the pupils in each frame. Costs extra CPU, so it is off unless something needs eye data.
+    var detectsEyes: Bool {
+        get { eyeDetection.withLock { $0 } }
+        set { eyeDetection.withLock { $0 = newValue } }
+    }
+    private let eyeDetection = OSAllocatedUnfairLock(initialState: false)
+
     private let sessionQueue = DispatchQueue(label: "com.arefbhrn.focusfollow.session")
     private let videoQueue = DispatchQueue(label: "com.arefbhrn.focusfollow.video", qos: .userInitiated)
     private let output = AVCaptureVideoDataOutput()
@@ -35,6 +43,7 @@ final class CameraPipeline: NSObject, @unchecked Sendable {
 
     // videoQueue only
     private let faceRequest: VNDetectFaceRectanglesRequest
+    private let landmarksRequest = VNDetectFaceLandmarksRequest()
     private var lastFrameTime = CMTime.invalid
     /// Slightly under 1/15 s so timestamp jitter doesn't halve the rate.
     private let minFrameInterval = CMTime(value: 1, timescale: 16)
@@ -174,13 +183,30 @@ extension CameraPipeline: AVCaptureVideoDataOutputSampleBufferDelegate {
             try handler.perform([faceRequest])
             // The largest face is most likely the person at the Mac.
             if let observation = faceRequest.results?.max(by: { area($0) < area($1) }) {
-                face = FaceSample(observation)
+                var sample = FaceSample(observation)
+                if detectsEyes {
+                    sample.eyes = eyes(for: observation, handler: handler, imageSize: imageSize)
+                }
+                face = sample
             }
         } catch {
             logger.error("Face detection failed: \(error.localizedDescription, privacy: .public)")
         }
 
         onFrame(FrameResult(face: face, imageSize: imageSize, timestamp: time.seconds))
+    }
+
+    /// Landmarks for the already detected face. A failure only costs the eye data, never the head pose.
+    private func eyes(for face: VNFaceObservation, handler: VNImageRequestHandler, imageSize: CGSize) -> EyeOffset? {
+        landmarksRequest.inputFaceObservations = [face]
+        do {
+            try handler.perform([landmarksRequest])
+        } catch {
+            logger.error("Eye detection failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+        guard let observation = landmarksRequest.results?.first else { return nil }
+        return EyeOffset(landmarks: observation, imageSize: imageSize)
     }
 
     private func area(_ observation: VNFaceObservation) -> CGFloat {

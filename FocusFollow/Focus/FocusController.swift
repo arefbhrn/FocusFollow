@@ -34,8 +34,9 @@ final class FocusController {
     private(set) var gridWasCleared = false
     /// Where on the classified screen the head points right now. Changes every frame; only debug views read it.
     private(set) var gaze: GazeEstimate?
-    /// Head-pose-to-screen-position models by display ID, for screens that have grid calibration.
-    private(set) var gazeModels: [String: GazeModel] = [:]
+    /// Gaze models by display ID and input set, for screens that have grid calibration.
+    /// A set is missing when its fit failed, for example eye data was not captured.
+    private(set) var gazeModels: [String: [GazeFeatureSet: GazeModel]] = [:]
 
     /// Why switching is held right now, or `nil` when free to switch. Updated every tick.
     private(set) var holdReason: HoldReason?
@@ -150,10 +151,13 @@ final class FocusController {
     }
 
     private func rebuildGazeModels() {
-        var models: [String: GazeModel] = [:]
+        var models: [String: [GazeFeatureSet: GazeModel]] = [:]
         for screen in calibration?.screens ?? [] {
-            if let grid = screen.grid, let model = GazeModel.fit(grid) {
-                models[screen.id] = model
+            guard let grid = screen.grid else { continue }
+            for set in GazeFeatureSet.allCases {
+                if let model = GazeModel.fit(grid, featureSet: set) {
+                    models[screen.id, default: [:]][set] = model
+                }
             }
         }
         gazeModels = models
@@ -244,9 +248,18 @@ final class FocusController {
     }
 
     private func updateGaze(for result: ScreenClassifier.Result, pose: HeadPose) {
-        if case .screen(let id) = result, let model = gazeModels[id] {
-            let point = model.predict(pose)
-            gaze = GazeEstimate(displayID: id, x: point.x, y: point.y)
+        if case .screen(let id) = result, let models = gazeModels[id] {
+            let input = GazeInput(pose: pose, eye: tracker.eyes)
+            // Use the preferred model, falling back when it has no fit or no eyes in this frame.
+            let order: [GazeFeatureSet] = FocusSettings.useEyes ? [.headEyes, .head, .headCross] : [.head, .headCross]
+            let estimate = order.lazy.compactMap { set in
+                models[set]?.predict(input).map { GazeEstimate(displayID: id, x: $0.x, y: $0.y, featureSet: set) }
+            }.first
+            if let estimate {
+                gaze = estimate
+            } else if gaze != nil {
+                gaze = nil
+            }
         } else if gaze != nil {
             gaze = nil
         }

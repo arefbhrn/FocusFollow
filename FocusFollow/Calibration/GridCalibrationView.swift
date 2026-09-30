@@ -37,8 +37,12 @@ struct GridSummaryView: View {
                 ForEach(focus.gridSession.displays) { display in
                     GridRow {
                         Text(focus.layout.label(for: display.id))
-                        if let model = focus.gazeModels[display.id] {
-                            Text("typical error \(model.error, format: .percent.precision(.fractionLength(0))) of the screen")
+                        if let models = focus.gazeModels[display.id], !models.isEmpty {
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(GazeFeatureSet.allCases, id: \.self) { set in
+                                    Text("\(set.title): \(errorText(models[set]))")
+                                }
+                            }
                         } else {
                             Text("not usable: move your head more toward each dot")
                                 .foregroundStyle(.orange)
@@ -47,7 +51,7 @@ struct GridSummaryView: View {
                 }
             }
             .font(.caption)
-            Text("Lower is better. The debug window shows the estimated gaze point live.")
+            Text("Typical error as a share of the screen. Lower is better. The debug window shows the estimated gaze point live.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             HStack {
@@ -57,5 +61,12 @@ struct GridSummaryView: View {
                     .keyboardShortcut(.defaultAction)
             }
         }
+    }
+}
+
+private extension GridSummaryView {
+    func errorText(_ model: GazeModel?) -> String {
+        guard let model else { return "not available" }
+        return model.error.formatted(.percent.precision(.fractionLength(0)))
     }
 }
