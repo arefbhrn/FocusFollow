@@ -2,7 +2,12 @@ import SwiftUI
 
 @main
 struct FocusFollowApp: App {
-    @State private var appState = AppState()
+    @State private var appState: AppState
+
+    init() {
+        SingleInstance.exitIfAnotherInstanceIsRunning()
+        _appState = State(initialValue: AppState())
+    }
 
     var body: some Scene {
         MenuBarExtra("FocusFollow", systemImage: appState.menuBarState.symbolName) {
