@@ -61,14 +61,12 @@ private struct GeneralTab: View {
                     LabeledContent {
                         Button("Open Login Items…") { loginItem.openLoginItemsSettings() }
                     } label: {
-                        Label("Approve FocusFollow in System Settings to finish.", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                        StatusLabel(kind: .warning, text: "Approve FocusFollow in System Settings to finish.")
                             .font(.callout)
                     }
                 }
                 if let message = loginItem.errorMessage {
-                    Label(message, systemImage: "xmark.octagon.fill")
-                        .foregroundStyle(.red)
+                    StatusLabel(kind: .problem, text: message)
                         .font(.callout)
                 }
             }
@@ -245,8 +243,7 @@ private struct ScreenCalibrationBadge: View {
     let calibrated: Bool
 
     var body: some View {
-        Label(calibrated ? "Calibrated" : "Not calibrated", systemImage: (calibrated ? Theme.Status.ok : .warning).symbol)
-            .foregroundStyle(calibrated ? Theme.Status.ok.color : Theme.Status.warning.color)
+        StatusLabel(kind: calibrated ? .ok : .warning, text: calibrated ? "Calibrated" : "Not calibrated")
     }
 }
 
@@ -259,15 +256,9 @@ private struct GazeGridBadge: View {
         if let model = focus.gazeModels[displayID] {
             let usable = model.gateError <= FocusSettings.maximumWindowError
             let kind: Theme.Status = usable ? (model.gateError <= 0.15 ? .ok : .warning) : .problem
-            Label {
-                Text("\(model.gateError, format: .percent.precision(.fractionLength(0))) error\(usable ? "" : " · too coarse")")
-            } icon: {
-                Image(systemName: kind.symbol)
-            }
-            .foregroundStyle(kind.color)
+            StatusLabel(kind: kind, text: "\(model.gateError.formatted(.percent.precision(.fractionLength(0)))) error\(usable ? "" : " · too coarse")")
         } else {
-            Label(focus.isCalibrated(displayID) ? "No gaze grid" : "Calibrate the screen first", systemImage: Theme.Status.neutral.symbol)
-                .foregroundStyle(.secondary)
+            StatusLabel(kind: .neutral, text: focus.isCalibrated(displayID) ? "No gaze grid" : "Calibrate the screen first", secondary: true)
         }
     }
 }
@@ -303,7 +294,7 @@ private struct SettingSlider: View {
                 // Snap to the step in the binding so the slider shows no tick marks.
                 Slider(value: Binding(
                     get: { value },
-                    set: { value = (($0 - range.lowerBound) / step).rounded() * step + range.lowerBound }
+                    set: { value = snapped($0) }
                 ), in: range) {
                     Text(title)
                 }
@@ -317,6 +308,13 @@ private struct SettingSlider: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, Theme.Space.xs)
+    }
+
+    /// Rounds to the step, then to a few decimals so 0.3 is stored as 0.3, and keeps the result inside the range.
+    private func snapped(_ raw: Double) -> Double {
+        let steps = ((raw - range.lowerBound) / step).rounded()
+        let rounded = ((range.lowerBound + steps * step) * 1000).rounded() / 1000
+        return min(max(rounded, range.lowerBound), range.upperBound)
     }
 
     private var valueText: String? {

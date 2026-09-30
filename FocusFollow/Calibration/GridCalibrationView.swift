@@ -8,7 +8,11 @@ struct GridProgressView: View {
             Text("Screen \(min(session.displayIndex + 1, session.displays.count)) of \(session.displays.count)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            ProgressRing(progress: session.progress) {
+            ProgressRing(
+                progress: session.progress,
+                label: "Point \(session.targetIndex + 1) of \(GridCalibrationSession.targets.count), screen \(min(session.displayIndex + 1, session.displays.count)) of \(session.displays.count)",
+                valueText: "\(Int(session.progress * 100)) percent of the grid calibration"
+            ) {
                 VStack(spacing: 0) {
                     Text("\(session.targetIndex + 1)")
                         .font(.system(size: 34, weight: .semibold, design: .rounded))
@@ -22,11 +26,10 @@ struct GridProgressView: View {
             if let display = session.currentDisplay {
                 Text(session.layout.label(for: display.id)).font(.title3.weight(.semibold))
             }
-            Label(statusText, systemImage: statusKind.symbol)
-                .foregroundStyle(statusKind == .warning ? statusKind.color : .secondary)
+            StatusLabel(kind: statusKind, text: statusText, secondary: statusKind != .warning)
                 .multilineTextAlignment(.center)
             if let message = session.message {
-                Text(message).font(.callout).foregroundStyle(.orange)
+                StatusLabel(kind: .warning, text: message).font(.callout)
             }
             HStack {
                 Button("Cancel", role: .cancel) { session.cancel() }
@@ -87,6 +90,11 @@ private struct DisplayGridCard: View {
                     Spacer()
                     badge
                 }
+                if focus.gazeModels[display.id] == nil {
+                    Text("Move your head more toward each dot and try again.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if let model = focus.gazeModels[display.id], !model.droppedIndices.isEmpty {
                     Text("\(model.droppedIndices.count) of \(model.misses.count) dots ignored as outliers (\(model.error.formatted(.percent.precision(.fractionLength(0)))) without them)")
                         .font(.caption)
@@ -110,14 +118,11 @@ private struct DisplayGridCard: View {
     private var badge: some View {
         if let model = focus.gazeModels[display.id] {
             let kind: Theme.Status = model.gateError <= 0.15 ? .ok : model.gateError <= FocusSettings.maximumWindowError ? .warning : .problem
-            Label("\(model.gateError.formatted(.percent.precision(.fractionLength(0)))) error", systemImage: kind.symbol)
+            StatusLabel(kind: kind, text: "\(model.gateError.formatted(.percent.precision(.fractionLength(0)))) error")
                 .font(.callout)
-                .foregroundStyle(kind.color)
         } else {
-            Label("Not usable", systemImage: Theme.Status.problem.symbol)
+            StatusLabel(kind: .problem, text: "Not usable")
                 .font(.callout)
-                .foregroundStyle(Theme.Status.problem.color)
-                .help("Move your head more toward each dot and try again.")
         }
     }
 }

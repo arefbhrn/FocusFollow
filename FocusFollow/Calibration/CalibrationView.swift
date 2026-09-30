@@ -63,7 +63,7 @@ struct CalibrationView: View {
                     .font(.callout)
                 }
                 if let message = session.message {
-                    Text(message).font(.callout).foregroundStyle(.orange)
+                    StatusLabel(kind: .warning, text: message).font(.callout)
                 }
                 HStack {
                     Spacer()
@@ -82,12 +82,11 @@ struct CalibrationView: View {
                 detail: "Look at a grid of dots on each screen so FocusFollow can tell where on the screen you're looking. Takes about \(gridSeconds) seconds per screen."
             ) {
                 if focus.gridWasCleared {
-                    Text("Recalibrating screens cleared the gaze grid. Calibrate it again to use window focus.")
+                    StatusLabel(kind: .warning, text: "Recalibrating screens cleared the gaze grid. Calibrate it again to use window focus.")
                         .font(.callout)
-                        .foregroundStyle(.orange)
                 }
                 if let message = gridSession.message {
-                    Text(message).font(.callout).foregroundStyle(.orange)
+                    StatusLabel(kind: .warning, text: message).font(.callout)
                 }
                 HStack {
                     if !focus.isCalibrated {
@@ -126,7 +125,10 @@ struct CalibrationView: View {
             Text("Screen \(session.index + 1) of \(session.layout.displays.count)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            ProgressRing(progress: session.progress) {
+            ProgressRing(
+                progress: session.progress,
+                label: "Calibrating screen \(session.index + 1) of \(session.layout.displays.count)"
+            ) {
                 Image(systemName: session.faceVisible || session.phase == .settling ? "viewfinder" : "person.fill.questionmark")
                     .font(.system(size: 34, weight: .medium))
                     .foregroundStyle(Theme.brandGradient)
@@ -135,11 +137,10 @@ struct CalibrationView: View {
             if let display = session.currentDisplay {
                 Text(session.layout.label(for: display.id)).font(.title3.weight(.semibold))
             }
-            Label(statusLine.text, systemImage: statusLine.kind.symbol)
-                .foregroundStyle(statusLine.kind == .ok || statusLine.kind == .neutral ? Color.secondary : statusLine.kind.color)
+            StatusLabel(kind: statusLine.kind, text: statusLine.text, secondary: statusLine.kind != .warning)
                 .multilineTextAlignment(.center)
             if let message = session.message {
-                Text(message).font(.callout).foregroundStyle(.orange)
+                StatusLabel(kind: .warning, text: message).font(.callout)
             }
             HStack {
                 Button("Cancel", role: .cancel) { session.cancel() }
@@ -294,16 +295,17 @@ struct CalibrationPill: View {
     let calibrated: Bool
 
     var body: some View {
-        let kind: Theme.Status = calibrated ? .ok : .neutral
-        Label(calibrated ? "Calibrated" : "Not calibrated", systemImage: kind.symbol)
+        StatusLabel(kind: calibrated ? .ok : .neutral, text: calibrated ? "Calibrated" : "Not calibrated", secondary: true)
             .font(.caption)
-            .foregroundStyle(calibrated ? kind.color : .secondary)
     }
 }
 
 /// A circular progress indicator with content in the middle. Skips the animation when Reduce Motion is on.
 struct ProgressRing<Center: View>: View {
     let progress: Double
+    /// What VoiceOver reads; the centre content is decorative to it.
+    var label = "Progress"
+    var valueText: String?
     @ViewBuilder var center: Center
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -318,8 +320,8 @@ struct ProgressRing<Center: View>: View {
             center
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Progress")
-        .accessibilityValue("\(Int(progress * 100)) percent")
+        .accessibilityLabel(label)
+        .accessibilityValue(valueText ?? "\(Int(progress * 100)) percent")
     }
 }
 

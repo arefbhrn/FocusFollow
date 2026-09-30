@@ -17,6 +17,7 @@ struct DebugView: View {
                 Color.black
                 if tracker.status == .running {
                     CameraPreview(session: tracker.session, cameraID: tracker.activeCameraID)
+                        .accessibilityLabel("Camera preview")
                     FaceBoxOverlay(box: tracker.faceBox, imageSize: tracker.imageSize)
                 } else {
                     StatusMessage(status: tracker.status)
@@ -24,7 +25,6 @@ struct DebugView: View {
             }
             .frame(height: 270)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.m, style: .continuous))
-            .accessibilityLabel("Camera preview")
 
             HStack(alignment: .top, spacing: Theme.Space.m) {
                 Card(padding: Theme.Space.m) { PoseReadout(tracker: tracker) }
@@ -169,8 +169,7 @@ private struct FocusReadout: View {
             }
             Divider()
             if focus.calibration == nil {
-                Label("Not calibrated for this display setup", systemImage: Theme.Status.warning.symbol)
-                    .foregroundStyle(Theme.Status.warning.color)
+                StatusLabel(kind: .warning, text: "Not calibrated for this display setup")
                     .font(.callout)
             } else if let evaluation = focus.evaluation {
                 LabeledContent("Now") { Text(focus.label(for: evaluation.result)) }
@@ -188,8 +187,7 @@ private struct FocusReadout: View {
                 }
                 .font(.caption)
             } else {
-                Label("No face in view", systemImage: Theme.Status.neutral.symbol)
-                    .foregroundStyle(.secondary)
+                StatusLabel(kind: .neutral, text: "No face in view", secondary: true)
                     .font(.callout)
             }
         }

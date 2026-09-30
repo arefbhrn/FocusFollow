@@ -72,6 +72,22 @@ struct StatusRow: View {
     }
 }
 
+/// A status as an icon and text. Only the icon carries the color: orange, green and red text on a light
+/// background is hard to read, and the meaning is already in the icon shape and the words.
+struct StatusLabel: View {
+    let kind: Theme.Status
+    let text: String
+    var secondary = false
+
+    var body: some View {
+        Label {
+            Text(text).foregroundStyle(secondary ? .secondary : .primary)
+        } icon: {
+            Image(systemName: kind.symbol).foregroundStyle(kind.color)
+        }
+    }
+}
+
 /// A grouped surface for related content.
 struct Card<Content: View>: View {
     var padding: CGFloat = Theme.Space.l

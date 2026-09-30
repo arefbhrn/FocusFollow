@@ -312,10 +312,18 @@ private struct TargetDot: View {
             Circle().fill(.white).frame(width: 26, height: 26)
             Circle().fill(Theme.brandGradient).frame(width: 16, height: 16)
         }
-        .onAppear {
-            guard !reduceMotion else { return }
+        // The overlay view lives for the whole app, so react to Reduce Motion changing between runs.
+        .onAppear { updatePulse() }
+        .onChange(of: reduceMotion) { _, _ in updatePulse() }
+        .accessibilityHidden(true)
+    }
+
+    private func updatePulse() {
+        if reduceMotion {
+            withAnimation(nil) { pulsing = false }
+        } else {
+            pulsing = false
             withAnimation(.easeOut(duration: 1.1).repeatForever(autoreverses: false)) { pulsing = true }
         }
-        .accessibilityHidden(true)
     }
 }
