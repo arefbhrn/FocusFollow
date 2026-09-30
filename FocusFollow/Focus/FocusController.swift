@@ -37,6 +37,9 @@ final class FocusController {
     /// Head-pose-to-screen-position models by display ID, for screens that have grid calibration.
     private(set) var gazeModels: [String: GazeModel] = [:]
 
+    /// The window the gaze points at, for the debug window. Changes only when the target does.
+    private(set) var targetWindowLabel: String?
+
     /// Why switching is held right now, or `nil` when free to switch. Updated every tick.
     private(set) var holdReason: HoldReason?
 
@@ -54,6 +57,13 @@ final class FocusController {
     @ObservationIgnored var onAccessibilityTrustChange: @MainActor (Bool) -> Void = { _ in }
     @ObservationIgnored private var lastTrustCheck = 0.0
     @ObservationIgnored private var lastWindowPoll = 0.0
+    @ObservationIgnored private var windowDwell = WindowDwell()
+    @ObservationIgnored private var windowCandidates: [WindowCandidate] = []
+    @ObservationIgnored private var windowCandidatesDisplayID: String?
+    @ObservationIgnored private var lastCandidateListing = 0.0
+    @ObservationIgnored private var targetWindowNumber: Int?
+    /// The window we already tried to focus for the current target. Focus fires once per target, never per tick.
+    @ObservationIgnored private var attemptedWindow: Int?
 
     init(tracker: HeadTracker, activity: ActivityMonitor) {
         self.tracker = tracker
@@ -215,6 +225,7 @@ final class FocusController {
         guard let pose = tracker.pose else {
             if evaluation != nil { evaluation = nil }
             if gaze != nil { gaze = nil }
+            resetWindowTarget()
             _ = dwell.update(nil, at: now)
             return
         }
@@ -232,6 +243,8 @@ final class FocusController {
                 pendingSwitch = nil
             }
         }
+
+        updateWindowFocus(now: now)
 
         guard let id = pendingSwitch else { return }
         guard latest.result == .screen(id) else {
@@ -252,7 +265,65 @@ final class FocusController {
         }
     }
 
+    /// Same-screen focus: once focus is on the screen being looked at, move it to the window the gaze points at.
+    private func updateWindowFocus(now: TimeInterval) {
+        guard FocusSettings.windowFocus, accessibilityTrusted, holdReason == nil, pendingSwitch == nil,
+              let gaze, let display = layout.display(withID: gaze.displayID),
+              let model = gazeModels[gaze.displayID], model.error <= FocusSettings.maximumWindowError,
+              windows.focusedDisplayID == display.id else {
+            resetWindowTarget()
+            return
+        }
+        if windowCandidatesDisplayID != display.id || now - lastCandidateListing >= 0.25 {
+            lastCandidateListing = now
+            windowCandidatesDisplayID = display.id
+            windowCandidates = windows.candidates(on: display)
+        }
+        // The estimate can fall off the screen; clamp so windows at the screen edge can still be picked.
+        let point = CGPoint(
+            x: display.bounds.minX + min(max(gaze.x, 0), 1) * display.bounds.width,
+            y: display.bounds.minY + min(max(gaze.y, 0), 1) * display.bounds.height
+        )
+        // The less certain the gaze, the wider the dead zone around window borders.
+        let share = model.error * FocusSettings.windowMarginScale
+        let margin = CGSize(width: share * display.bounds.width, height: share * display.bounds.height)
+        let picked = WindowPicker.pick(at: point, in: windowCandidates, margin: margin, screen: display.bounds)
+        setTargetWindow(picked)
+
+        // Update the dwell even when nothing is picked, so a stay in the dead zone restarts the wait.
+        let confirmed = windowDwell.update(picked?.number, at: now, delay: FocusSettings.dwellDelay)
+        if picked?.number != attemptedWindow { attemptedWindow = nil }
+        guard let picked, confirmed == picked.number,
+              attemptedWindow != picked.number,
+              !windows.isFocused(picked) else { return }
+        // One attempt per target, successful or not: a window that ignores activation or an app that raises
+        // itself must not be fought over every tick.
+        attemptedWindow = picked.number
+        Self.logger.info("Focusing window \(picked.number) of pid \(picked.pid)")
+        windows.focus(picked, on: display)
+        // The front-to-back order just changed.
+        lastCandidateListing = -.infinity
+    }
+
+    private func resetWindowTarget() {
+        windowDwell.reset()
+        attemptedWindow = nil
+        setTargetWindow(nil)
+    }
+
+    private func setTargetWindow(_ candidate: WindowCandidate?) {
+        guard candidate?.number != targetWindowNumber else { return }
+        targetWindowNumber = candidate?.number
+        if let candidate {
+            let name = NSRunningApplication(processIdentifier: candidate.pid)?.localizedName ?? "pid \(candidate.pid)"
+            targetWindowLabel = "\(name) (\(Int(candidate.bounds.width))×\(Int(candidate.bounds.height)))"
+        } else {
+            targetWindowLabel = nil
+        }
+    }
+
     private func clearClassification() {
+        resetWindowTarget()
         if gaze != nil { gaze = nil }
         if evaluation != nil { evaluation = nil }
         if confirmed != nil { confirmed = nil }

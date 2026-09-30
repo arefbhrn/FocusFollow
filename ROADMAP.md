@@ -88,9 +88,9 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 ## Phase 5 — Same-screen window focus
 
 - [x] Map pose to position within a screen: 5×5 grid calibration, linear fit, live gaze map in the debug window
-- [ ] Pick window under the estimated gaze point from `CGWindowList`
-- [ ] Treat browsers / document windows as whole units (no focus stealing inside)
-- [ ] Hysteresis so focus doesn't flicker on window borders
+- [x] Pick window under the estimated gaze point from `CGWindowList` (off by default; screens with grid error above 25% are skipped)
+- [x] Treat browsers / document windows as whole units (no focus stealing inside): focus moves between windows, never within one
+- [x] Hysteresis so focus doesn't flicker on window borders: dead zone scaled to gaze error, glance delay, one focus attempt per target
 
 ## Phase 6 — Split-pane focus
 

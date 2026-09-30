@@ -124,6 +124,9 @@ private struct FocusReadout: View {
             Text("Focus").bold()
             Text("Accessibility: \(focus.accessibilityTrusted ? "granted" : "not granted")")
             Text("Switching: \(focus.holdReason?.label ?? "free")")
+            if FocusSettings.windowFocus {
+                Text("Window under gaze: \(focus.targetWindowLabel ?? "—")")
+            }
             if focus.calibration == nil {
                 Text("Not calibrated for this display setup")
             } else if let evaluation = focus.evaluation {

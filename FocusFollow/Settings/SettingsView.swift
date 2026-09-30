@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage(FocusSettings.mousePauseKey) private var mousePause = FocusSettings.defaultMousePause
     @AppStorage(FocusSettings.awayThresholdKey) private var awayThreshold = FocusSettings.defaultAwayThreshold
     @AppStorage(FocusSettings.moveCursorKey) private var moveCursor = FocusSettings.defaultMoveCursor
+    @AppStorage(FocusSettings.windowFocusKey) private var windowFocus = FocusSettings.defaultWindowFocus
 
     var body: some View {
         Form {
@@ -39,6 +40,13 @@ struct SettingsView: View {
                     step: 0.5
                 )
                 Toggle("Move the cursor with focus", isOn: $moveCursor)
+            }
+
+            Section("Window focus (experimental)") {
+                Toggle("Focus windows on the same screen", isOn: $windowFocus)
+                Text("Looking at a window on the current screen focuses it. Needs a gaze grid (Calibrate → Calibrate Gaze Grid). Screens where the estimate is less accurate get a wider dead zone around window borders, and screens with an error above \(Int(FocusSettings.maximumWindowError * 100))% are skipped.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Head-turn tolerance") {
@@ -68,12 +76,15 @@ struct SettingsView: View {
                 }
                 ForEach(focus.layout.displays) { display in
                     LabeledContent(focus.layout.label(for: display.id)) {
-                        if focus.isCalibrated(display.id) {
-                            Label("Calibrated", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                        } else {
-                            Label("Not calibrated", systemImage: "exclamationmark.circle")
-                                .foregroundStyle(.orange)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            if focus.isCalibrated(display.id) {
+                                Label("Calibrated", systemImage: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                            } else {
+                                Label("Not calibrated", systemImage: "exclamationmark.circle")
+                                    .foregroundStyle(.orange)
+                            }
+                            gridStatus(for: display.id)
                         }
                     }
                 }
@@ -132,6 +143,22 @@ private struct SecondsSlider: View {
             Slider(value: $value, in: range, step: step)
                 .labelsHidden()
             Text(help)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private extension SettingsView {
+    @ViewBuilder
+    func gridStatus(for displayID: String) -> some View {
+        if let model = focus.gazeModels[displayID] {
+            let usable = model.error <= FocusSettings.maximumWindowError
+            Text("Gaze grid: error \(model.error, format: .percent.precision(.fractionLength(0)))\(usable ? "" : " (too coarse for windows)")")
+                .font(.caption)
+                .foregroundStyle(usable ? Color.secondary : Color.orange)
+        } else if focus.isCalibrated(displayID) {
+            Text("No gaze grid")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -12,6 +12,12 @@ enum FocusSettings {
     static let defaultAwayThreshold = 3.0
     static let moveCursorKey = "moveCursor"
     static let defaultMoveCursor = true
+    static let windowFocusKey = "focusWindowsOnScreen"
+    static let defaultWindowFocus = false
+    /// Above this leave-one-out error (fraction of the screen) the gaze is too coarse to choose between windows.
+    static let maximumWindowError = 0.25
+    /// Share of the gaze error used as the border margin around windows.
+    static let windowMarginScale = 0.5
 
     static let dwellDelayRange = 0.1...1.5
     static let typingPauseRange = 0.0...10.0
@@ -45,6 +51,11 @@ enum FocusSettings {
     /// Whether the cursor follows focus to the new screen.
     static var moveCursor: Bool {
         UserDefaults.standard.object(forKey: moveCursorKey) as? Bool ?? defaultMoveCursor
+    }
+
+    /// Whether looking at a window on the current screen focuses it (experimental).
+    static var windowFocus: Bool {
+        UserDefaults.standard.object(forKey: windowFocusKey) as? Bool ?? defaultWindowFocus
     }
 
     private static func seconds(forKey key: String, default fallback: TimeInterval) -> TimeInterval {
