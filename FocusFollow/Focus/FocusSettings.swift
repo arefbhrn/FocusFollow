@@ -12,8 +12,6 @@ enum FocusSettings {
     static let defaultAwayThreshold = 3.0
     static let moveCursorKey = "moveCursor"
     static let defaultMoveCursor = true
-    static let useEyesKey = "useEyeFeatures"
-    static let defaultUseEyes = false
 
     static let dwellDelayRange = 0.1...1.5
     static let typingPauseRange = 0.0...10.0
@@ -47,11 +45,6 @@ enum FocusSettings {
     /// Whether the cursor follows focus to the new screen.
     static var moveCursor: Bool {
         UserDefaults.standard.object(forKey: moveCursorKey) as? Bool ?? defaultMoveCursor
-    }
-
-    /// Whether the gaze estimate also uses the pupil position (experimental).
-    static var useEyes: Bool {
-        UserDefaults.standard.object(forKey: useEyesKey) as? Bool ?? defaultUseEyes
     }
 
     private static func seconds(forKey key: String, default fallback: TimeInterval) -> TimeInterval {

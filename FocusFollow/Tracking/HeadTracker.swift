@@ -49,17 +49,6 @@ final class HeadTracker {
     /// Changes only when a face appears or disappears. The menu and icon read this instead of `pose`,
     /// which changes every frame and would re-render them continuously.
     private(set) var hasFace = false
-    /// Smoothed pupil offset. Changes every frame, like `pose`. `nil` unless eye detection is on and both pupils were found.
-    private(set) var eyes: EyeOffset?
-    private(set) var rawEyes: EyeOffset?
-    /// The user's "use eye tracking" setting. Eye detection also runs while a calibration asks for it.
-    var eyeTrackingEnabled: Bool {
-        didSet { updateEyeDetection() }
-    }
-    /// Set by grid calibration so eye data is recorded even when the setting is off.
-    var calibrationNeedsEyes = false {
-        didSet { updateEyeDetection() }
-    }
     private(set) var faceBox: CGRect?
     private(set) var imageSize = CGSize.zero
     private(set) var framesPerSecond = 0.0
@@ -68,7 +57,6 @@ final class HeadTracker {
     var smoothing: Double {
         didSet {
             smoother.alpha = smoothing
-            eyeSmoother.alpha = smoothing
             UserDefaults.standard.set(smoothing, forKey: Keys.smoothing)
         }
     }
@@ -77,7 +65,6 @@ final class HeadTracker {
 
     @ObservationIgnored private let pipeline: CameraPipeline
     @ObservationIgnored private var smoother: PoseSmoother
-    @ObservationIgnored private var eyeSmoother = EyeSmoother(alpha: 0.3)
     @ObservationIgnored private var wantsRunning = false
     @ObservationIgnored private var lastFrameTimestamp: Double?
     @ObservationIgnored private var frameTask: Task<Void, Never>?
@@ -92,12 +79,10 @@ final class HeadTracker {
 
         let defaults = UserDefaults.standard
         selectedCameraID = defaults.string(forKey: Keys.camera)
-        eyeTrackingEnabled = FocusSettings.useEyes
         let savedSmoothing = defaults.double(forKey: Keys.smoothing)
         let initialSmoothing = savedSmoothing > 0 ? savedSmoothing : 0.3
         smoothing = initialSmoothing
         smoother = PoseSmoother(alpha: initialSmoothing)
-        eyeSmoother = EyeSmoother(alpha: initialSmoothing)
 
         frameTask = Task { [weak self] in
             for await frame in frames {
@@ -105,13 +90,8 @@ final class HeadTracker {
             }
         }
 
-        updateEyeDetection()
         refreshCameras()
         observeCameraChanges()
-    }
-
-    private func updateEyeDetection() {
-        pipeline.detectsEyes = eyeTrackingEnabled || calibrationNeedsEyes
     }
 
     func start() async {
@@ -175,30 +155,21 @@ final class HeadTracker {
             rawPose = face.pose
             pose = smoother.update(with: face.pose)
             faceBox = face.boundingBox
-            rawEyes = face.eyes
-            eyes = face.eyes.map { eyeSmoother.update(with: $0) }
-            if face.eyes == nil { eyeSmoother.reset() }
         } else {
             rawPose = nil
             pose = nil
             faceBox = nil
-            rawEyes = nil
-            eyes = nil
             smoother.reset()
-            eyeSmoother.reset()
         }
     }
 
     private func clearFaceState() {
         rawPose = nil
         pose = nil
-        rawEyes = nil
-        eyes = nil
         faceBox = nil
         framesPerSecond = 0
         lastFrameTimestamp = nil
         smoother.reset()
-        eyeSmoother.reset()
     }
 
     private func refreshCameras() {

@@ -168,12 +168,6 @@ private struct PoseReadout: View {
                     .gridCellAnchor(.leading)
             }
             GridRow {
-                Text("Eyes")
-                Text(eyeText)
-                    .gridCellColumns(2)
-                    .gridCellAnchor(.leading)
-            }
-            GridRow {
                 Text("FPS")
                 Text(tracker.framesPerSecond, format: .number.precision(.fractionLength(1)))
                     .gridCellColumns(2)
@@ -190,11 +184,6 @@ private struct PoseReadout: View {
             Text(format(tracker.rawPose?[keyPath: angle]))
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private var eyeText: String {
-        guard let eyes = tracker.eyes else { return "—" }
-        return String(format: "%+.2f %+.2f", eyes.x, eyes.y)
     }
 
     private func format(_ degrees: Double?) -> String {
@@ -265,21 +254,7 @@ private struct GazeMapView: View {
                 }
                 .frame(width: width, height: height)
                 .clipShape(Rectangle())
-                Text(focus.layout.label(for: display.id))
-                    .foregroundStyle(.secondary)
-                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 2) {
-                    ForEach(GazeFeatureSet.allCases, id: \.self) { set in
-                        GridRow {
-                            Text(set.title)
-                            if let model = focus.gazeModels[display.id]?[set] {
-                                Text("error \(model.error, format: .percent.precision(.fractionLength(0)))")
-                            } else {
-                                Text("—").foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                Text("Dot from: \(gaze.featureSet.title)")
+                Text("\(focus.layout.label(for: display.id)) · typical error \(focus.gazeModels[display.id]?.error ?? 0, format: .percent.precision(.fractionLength(0)))")
                     .foregroundStyle(.secondary)
             } else if focus.gazeModels.isEmpty {
                 Text("No gaze grid yet. Use Calibrate → Calibrate Gaze Grid.")

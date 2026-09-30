@@ -43,7 +43,6 @@ final class GridCalibrationSession {
     @ObservationIgnored private let overlay = GridOverlay()
     @ObservationIgnored private var loopTask: Task<Void, Never>?
     @ObservationIgnored private var poses: [HeadPose] = []
-    @ObservationIgnored private var eyeSamples: [EyeOffset] = []
     @ObservationIgnored private var elapsed: TimeInterval = 0
     @ObservationIgnored private var lastTick: TimeInterval = 0
     @ObservationIgnored private var escapeMonitors: [Any] = []
@@ -79,8 +78,6 @@ final class GridCalibrationSession {
         results = [:]
         displayIndex = 0
         targetIndex = 0
-        // Record pupil data for every target, even if eye tracking is off, so the models can be compared.
-        tracker.calibrationNeedsEyes = true
         beginTarget()
         startLoop()
     }
@@ -96,7 +93,6 @@ final class GridCalibrationSession {
     private func beginTarget(keepingMessage: Bool = false) {
         phase = .settling
         poses = []
-        eyeSamples = []
         elapsed = 0
         faceVisible = false
         if !keepingMessage { message = nil }
@@ -147,7 +143,6 @@ final class GridCalibrationSession {
     }
 
     private func stopLoop() {
-        tracker.calibrationNeedsEyes = false
         removeEscapeMonitors()
         loopTask?.cancel()
         loopTask = nil
@@ -170,10 +165,7 @@ final class GridCalibrationSession {
             // Raw, not smoothed: the smoothed pose still lags toward the previous target.
             if let pose = tracker.rawPose {
                 faceVisible = true
-                if pose != poses.last {
-                    poses.append(pose)
-                    if let eye = tracker.rawEyes { eyeSamples.append(eye) }
-                }
+                if pose != poses.last { poses.append(pose) }
                 elapsed += dt
             } else {
                 faceVisible = false
@@ -195,22 +187,11 @@ final class GridCalibrationSession {
         }
         let count = Double(poses.count)
         let target = Self.targets[targetIndex]
-        // Eye data is kept only if it was found in enough frames to average.
-        var eyeMean: EyeOffset?
-        if eyeSamples.count >= Self.minimumSamples {
-            let eyeCount = Double(eyeSamples.count)
-            eyeMean = EyeOffset(
-                x: eyeSamples.reduce(0) { $0 + $1.x } / eyeCount,
-                y: eyeSamples.reduce(0) { $0 + $1.y } / eyeCount
-            )
-        }
         results[display.id, default: []].append(GridSample(
             x: target.x,
             y: target.y,
             yaw: poses.reduce(0) { $0 + $1.yaw } / count,
-            pitch: poses.reduce(0) { $0 + $1.pitch } / count,
-            eyeX: eyeMean?.x,
-            eyeY: eyeMean?.y
+            pitch: poses.reduce(0) { $0 + $1.pitch } / count
         ))
         advance()
     }

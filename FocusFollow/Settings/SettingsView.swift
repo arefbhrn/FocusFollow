@@ -13,7 +13,6 @@ struct SettingsView: View {
     @AppStorage(FocusSettings.mousePauseKey) private var mousePause = FocusSettings.defaultMousePause
     @AppStorage(FocusSettings.awayThresholdKey) private var awayThreshold = FocusSettings.defaultAwayThreshold
     @AppStorage(FocusSettings.moveCursorKey) private var moveCursor = FocusSettings.defaultMoveCursor
-    @AppStorage(FocusSettings.useEyesKey) private var useEyes = FocusSettings.defaultUseEyes
 
     var body: some View {
         Form {
@@ -57,14 +56,6 @@ struct SettingsView: View {
                 }
                 Button("Reset to Default") { awayThreshold = FocusSettings.defaultAwayThreshold }
                     .disabled(awayThreshold == FocusSettings.defaultAwayThreshold)
-            }
-
-            Section("Gaze (experimental)") {
-                Toggle("Use eye tracking", isOn: $useEyes)
-                    .onChange(of: useEyes) { _, enabled in tracker.eyeTrackingEnabled = enabled }
-                Text("Adds the pupil position to the gaze estimate. Uses more CPU. The gaze grid records eye data either way, so you can compare the two in the debug window.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section("Camera") {
