@@ -16,12 +16,29 @@ final class FocusController {
     private(set) var calibration: Calibration?
     private(set) var accessibilityTrusted: Bool
     /// Latest classification of the smoothed pose, before the dwell delay. `nil` without a face or calibration.
-    private(set) var evaluation: ScreenClassifier.Evaluation?
+    private(set) var evaluation: ScreenClassifier.Evaluation? {
+        didSet {
+            if evaluation?.result != currentResult { currentResult = evaluation?.result }
+        }
+    }
+    /// Just the classification in `evaluation`. Unlike `evaluation` it only changes when the result does,
+    /// so views that show it (the menu) don't re-render every frame.
+    private(set) var currentResult: ScreenClassifier.Result?
     /// Classification that has been stable for the dwell delay.
     private(set) var confirmed: ScreenClassifier.Result?
     /// The display setup changed to one with no saved calibration. Cleared once it is calibrated.
     private(set) var hasNewDisplaySetup = false
     let session: CalibrationSession
+    let gridSession: GridCalibrationSession
+    /// A screen recalibration replaced a calibration that had gaze grids. Cleared once a grid is saved again.
+    private(set) var gridWasCleared = false
+    /// Where on the classified screen the head points right now. Changes every frame; only debug views read it.
+    private(set) var gaze: GazeEstimate?
+    /// Head-pose-to-screen-position models by display ID, for screens that have grid calibration.
+    private(set) var gazeModels: [String: GazeModel] = [:]
+
+    /// The window the gaze points at, for the debug window. Changes only when the target does.
+    private(set) var targetWindowLabel: String?
 
     /// Why switching is held right now, or `nil` when free to switch. Updated every tick.
     private(set) var holdReason: HoldReason?
@@ -40,6 +57,13 @@ final class FocusController {
     @ObservationIgnored var onAccessibilityTrustChange: @MainActor (Bool) -> Void = { _ in }
     @ObservationIgnored private var lastTrustCheck = 0.0
     @ObservationIgnored private var lastWindowPoll = 0.0
+    @ObservationIgnored private var windowDwell = WindowDwell()
+    @ObservationIgnored private var windowCandidates: [WindowCandidate] = []
+    @ObservationIgnored private var windowCandidatesDisplayID: String?
+    @ObservationIgnored private var lastCandidateListing = 0.0
+    @ObservationIgnored private var targetWindowNumber: Int?
+    /// The window we already tried to focus for the current target. Focus fires once per target, never per tick.
+    @ObservationIgnored private var attemptedWindow: Int?
 
     init(tracker: HeadTracker, activity: ActivityMonitor) {
         self.tracker = tracker
@@ -49,12 +73,16 @@ final class FocusController {
         windows.onWillWarpCursor = { [activity] in activity.noteCursorWarp() }
         self.windows = windows
         session = CalibrationSession(tracker: tracker)
+        gridSession = GridCalibrationSession(tracker: tracker)
         accessibilityTrusted = AccessibilityPermission.isTrusted
 
         loadCalibration()
 
         session.onFinish = { [weak self] calibration in
             self?.apply(calibration)
+        }
+        gridSession.onFinish = { [weak self] results in
+            self?.applyGrid(results)
         }
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -105,13 +133,50 @@ final class FocusController {
 
     private func apply(_ calibration: Calibration) {
         guard calibration.arrangementKey == layout.key else { return }
+        if self.calibration?.screens.contains(where: { $0.grid != nil }) == true { gridWasCleared = true }
         CalibrationStore.save(calibration)
         self.calibration = calibration
         hasNewDisplaySetup = false
         rebuildClassifier()
     }
 
+    /// The saved gaze grid for a display, for showing how well it fits.
+    func gazeGrid(for displayID: String) -> [GridSample]? {
+        calibration?.screens.first { $0.id == displayID }?.grid
+    }
+
+    /// Runs grid calibration on every screen that already has a screen calibration.
+    func startGridCalibration() {
+        let calibrated = layout.displays.filter { isCalibrated($0.id) }
+        gridSession.start(displays: calibrated, layout: layout)
+    }
+
+    private func applyGrid(_ results: [String: [GridSample]]) {
+        guard var calibration else { return }
+        for index in calibration.screens.indices {
+            if let grid = results[calibration.screens[index].id] {
+                calibration.screens[index].grid = grid
+            }
+        }
+        CalibrationStore.save(calibration)
+        self.calibration = calibration
+        gridWasCleared = false
+        rebuildGazeModels()
+    }
+
+    private func rebuildGazeModels() {
+        var models: [String: GazeModel] = [:]
+        for screen in calibration?.screens ?? [] {
+            if let grid = screen.grid, let model = GazeModel.fit(grid) {
+                models[screen.id] = model
+            }
+        }
+        gazeModels = models
+        gaze = nil
+    }
+
     private func rebuildClassifier() {
+        rebuildGazeModels()
         let stats = Dictionary(
             (calibration?.screens ?? []).map { ($0.id, $0.stats) },
             uniquingKeysWith: { _, latest in latest }
@@ -128,6 +193,7 @@ final class FocusController {
         guard newLayout != layout else { return }
         Self.logger.info("Display arrangement changed: \(newLayout.displays.count) displays")
         if session.isActive { session.cancel() }
+        if gridSession.phase != .idle { gridSession.cancel() }
         layout = newLayout
         windows.layout = newLayout
         loadCalibration()
@@ -157,18 +223,21 @@ final class FocusController {
         if hold != holdReason { holdReason = hold }
 
         classifier?.awayThreshold = FocusSettings.awayThreshold
-        guard !session.isActive, let classifier else {
+        guard !session.isActive, !gridSession.isActive, let classifier else {
             clearClassification()
             return
         }
         guard let pose = tracker.pose else {
             if evaluation != nil { evaluation = nil }
+            if gaze != nil { gaze = nil }
+            resetWindowTarget()
             _ = dwell.update(nil, at: now)
             return
         }
 
         let latest = classifier.evaluate(pose)
         evaluation = latest
+        updateGaze(for: latest.result, pose: pose)
         dwell.delay = FocusSettings.dwellDelay
         if let newlyConfirmed = dwell.update(latest.result, at: now) {
             confirmed = newlyConfirmed
@@ -180,6 +249,8 @@ final class FocusController {
             }
         }
 
+        updateWindowFocus(now: now)
+
         guard let id = pendingSwitch else { return }
         guard latest.result == .screen(id) else {
             pendingSwitch = nil
@@ -190,7 +261,75 @@ final class FocusController {
         switchIfNeeded(to: id)
     }
 
+    private func updateGaze(for result: ScreenClassifier.Result, pose: HeadPose) {
+        if case .screen(let id) = result, let model = gazeModels[id] {
+            let point = model.predict(pose)
+            gaze = GazeEstimate(displayID: id, x: point.x, y: point.y)
+        } else if gaze != nil {
+            gaze = nil
+        }
+    }
+
+    /// Same-screen focus: once focus is on the screen being looked at, move it to the window the gaze points at.
+    private func updateWindowFocus(now: TimeInterval) {
+        guard FocusSettings.windowFocus, accessibilityTrusted, holdReason == nil, pendingSwitch == nil,
+              let gaze, let display = layout.display(withID: gaze.displayID),
+              let model = gazeModels[gaze.displayID], model.gateError <= FocusSettings.maximumWindowError,
+              windows.focusedDisplayID == display.id else {
+            resetWindowTarget()
+            return
+        }
+        if windowCandidatesDisplayID != display.id || now - lastCandidateListing >= 0.25 {
+            lastCandidateListing = now
+            windowCandidatesDisplayID = display.id
+            windowCandidates = windows.candidates(on: display)
+        }
+        // The estimate can fall off the screen; clamp so windows at the screen edge can still be picked.
+        let point = CGPoint(
+            x: display.bounds.minX + min(max(gaze.x, 0), 1) * display.bounds.width,
+            y: display.bounds.minY + min(max(gaze.y, 0), 1) * display.bounds.height
+        )
+        // The less certain the gaze, the wider the dead zone around window borders.
+        let share = model.gateError * FocusSettings.windowMarginScale
+        let margin = CGSize(width: share * display.bounds.width, height: share * display.bounds.height)
+        let picked = WindowPicker.pick(at: point, in: windowCandidates, margin: margin, screen: display.bounds)
+        setTargetWindow(picked)
+
+        // Update the dwell even when nothing is picked, so a stay in the dead zone restarts the wait.
+        let confirmed = windowDwell.update(picked?.number, at: now, delay: FocusSettings.dwellDelay)
+        if picked?.number != attemptedWindow { attemptedWindow = nil }
+        guard let picked, confirmed == picked.number,
+              attemptedWindow != picked.number,
+              !windows.isFocused(picked) else { return }
+        // One attempt per target, successful or not: a window that ignores activation or an app that raises
+        // itself must not be fought over every tick.
+        attemptedWindow = picked.number
+        Self.logger.info("Focusing window \(picked.number) of pid \(picked.pid)")
+        windows.focus(picked, on: display)
+        // The front-to-back order just changed.
+        lastCandidateListing = -.infinity
+    }
+
+    private func resetWindowTarget() {
+        windowDwell.reset()
+        attemptedWindow = nil
+        setTargetWindow(nil)
+    }
+
+    private func setTargetWindow(_ candidate: WindowCandidate?) {
+        guard candidate?.number != targetWindowNumber else { return }
+        targetWindowNumber = candidate?.number
+        if let candidate {
+            let name = NSRunningApplication(processIdentifier: candidate.pid)?.localizedName ?? "pid \(candidate.pid)"
+            targetWindowLabel = "\(name) (\(Int(candidate.bounds.width))×\(Int(candidate.bounds.height)))"
+        } else {
+            targetWindowLabel = nil
+        }
+    }
+
     private func clearClassification() {
+        resetWindowTarget()
+        if gaze != nil { gaze = nil }
         if evaluation != nil { evaluation = nil }
         if confirmed != nil { confirmed = nil }
         pendingSwitch = nil

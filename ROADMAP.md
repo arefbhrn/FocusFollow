@@ -33,7 +33,8 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ---
 
-> **v1.0.0** = Phases 0–4: multi-screen focus, pauses, settings. Phases 5–8 are post-v1.
+> **v1.0.0** = Phases 0–4: multi-screen focus, pauses, settings.
+> **v1.1.0** = Phase 5 (experimental same-screen window focus) plus a redesigned UI and the DMG background. Phases 6–8 are still ahead.
 
 ## Phase 0 — Project setup
 
@@ -87,10 +88,10 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 5 — Same-screen window focus
 
-- [ ] Map pose to position within a screen (needs finer calibration: corners / grid)
-- [ ] Pick window under the estimated gaze point from `CGWindowList`
-- [ ] Treat browsers / document windows as whole units (no focus stealing inside)
-- [ ] Hysteresis so focus doesn't flicker on window borders
+- [x] Map pose to position within a screen: 5×5 grid calibration, linear fit, live gaze map in the debug window
+- [x] Pick window under the estimated gaze point from `CGWindowList` (off by default; screens with grid error above 25% are skipped)
+- [x] Treat browsers / document windows as whole units (no focus stealing inside): focus moves between windows, never within one
+- [x] Hysteresis so focus doesn't flicker on window borders: dead zone scaled to gaze error, glance delay, one focus attempt per target
 
 ## Phase 6 — Split-pane focus
 
@@ -110,7 +111,9 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 8 — Polish + sharing
 
-- [ ] App icon + menu bar glyph
+- [x] App icon (done in v1.0.0)
+- [ ] Menu bar glyph
+- [x] DMG background image with an arrow from the app to Applications (v1.1.0)
 - [ ] Onboarding (permissions → calibration → done)
 - [ ] CPU / battery tuning (lower fps when idle, stop camera when paused)
 - [ ] Release build zipped on GitHub Releases (unsigned; "Open Anyway" instructions)

@@ -72,6 +72,7 @@ final class AppState {
                 await self.tracker.start()
             }
         } else {
+            if focus.gridSession.isActive { focus.gridSession.cancel() }
             tracker.stop()
         }
     }

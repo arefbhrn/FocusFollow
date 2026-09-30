@@ -39,6 +39,8 @@ struct ScreenCalibration: Sendable, Codable, Equatable, Identifiable {
     var stats: ScreenStats
     /// Downsampled, kept so later phases can refit without recalibrating.
     var samples: [PoseSample]
+    /// Head pose per grid target, for locating the gaze within this screen. Absent until grid calibration is run.
+    var grid: [GridSample]?
 }
 
 struct Calibration: Sendable, Codable, Equatable {

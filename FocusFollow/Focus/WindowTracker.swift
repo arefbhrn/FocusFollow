@@ -15,6 +15,9 @@ final class WindowTracker {
     var layout: DisplayLayout
     /// Display of the frontmost app's focused window, as of the last `poll()`. `nil` if unknown or it's our own window.
     private(set) var focusedDisplayID: String?
+    /// Process and frame of the frontmost app's focused window, as of the last `poll()`.
+    private(set) var focusedPID: pid_t?
+    private(set) var focusedFrame: CGRect?
     /// Called right before the cursor is warped, so input monitors can ignore our own movement.
     var onWillWarpCursor: @MainActor () -> Void = {}
 
@@ -45,9 +48,13 @@ final class WindowTracker {
               let frame = AX.frame(of: window),
               let display = layout.display(containing: CGPoint(x: frame.midX, y: frame.midY)) else {
             focusedDisplayID = nil
+            focusedPID = nil
+            focusedFrame = nil
             return
         }
         focusedDisplayID = display.id
+        focusedPID = app.processIdentifier
+        focusedFrame = frame
         remembered[display.id] = Remembered(pid: app.processIdentifier, window: window)
     }
 
@@ -66,6 +73,53 @@ final class WindowTracker {
         warpCursor(to: CGPoint(x: display.bounds.midX, y: display.bounds.midY))
     }
 
+    /// Visible normal windows that touch `display`, front to back. Windows that hide others but must not be
+    /// picked (our own, or ones centered on another display) are included and marked not selectable.
+    func candidates(on display: DisplayInfo) -> [WindowCandidate] {
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return []
+        }
+        return list.compactMap { info in
+            guard (info[kCGWindowLayer as String] as? Int) == 0,
+                  let number = info[kCGWindowNumber as String] as? Int,
+                  let pid = info[kCGWindowOwnerPID as String] as? pid_t,
+                  (info[kCGWindowAlpha as String] as? Double ?? 1) > 0,
+                  let boundsInfo = info[kCGWindowBounds as String] as? [String: Any],
+                  let bounds = CGRect(dictionaryRepresentation: boundsInfo as CFDictionary),
+                  bounds.width >= 50, bounds.height >= 50,
+                  bounds.intersects(display.bounds) else { return nil }
+            let selectable = pid != ownPID && display.bounds.contains(CGPoint(x: bounds.midX, y: bounds.midY))
+            return WindowCandidate(number: number, pid: pid, bounds: bounds, selectable: selectable)
+        }
+    }
+
+    /// Whether `candidate` is already the focused window, as of the last `poll()`.
+    func isFocused(_ candidate: WindowCandidate) -> Bool {
+        guard focusedPID == candidate.pid, let frame = focusedFrame else { return false }
+        return Self.sameFrame(frame, candidate.bounds)
+    }
+
+    /// Focuses `candidate` and moves the cursor to it if that setting is on. `false` if no matching window was found.
+    @discardableResult
+    func focus(_ candidate: WindowCandidate, on display: DisplayInfo) -> Bool {
+        guard let window = axWindow(pid: candidate.pid, matching: candidate.bounds) else { return false }
+        let entry = Remembered(pid: candidate.pid, window: window)
+        guard focus(entry, on: display) else { return false }
+        remembered[display.id] = entry
+        return true
+    }
+
+    private func axWindow(pid: pid_t, matching bounds: CGRect) -> AXUIElement? {
+        AX.windows(pid: pid).first { window in
+            guard !AX.isMinimized(window), let frame = AX.frame(of: window) else { return false }
+            return Self.sameFrame(frame, bounds)
+        }
+    }
+
+    private static func sameFrame(_ a: CGRect, _ b: CGRect) -> Bool {
+        abs(a.minX - b.minX) < 3 && abs(a.minY - b.minY) < 3 && abs(a.width - b.width) < 3 && abs(a.height - b.height) < 3
+    }
+
     private func focus(_ entry: Remembered, on display: DisplayInfo) -> Bool {
         guard let app = NSRunningApplication(processIdentifier: entry.pid),
               !app.isHidden,
@@ -76,6 +130,9 @@ final class WindowTracker {
         AX.focus(window: entry.window, pid: entry.pid)
         warpCursor(to: CGPoint(x: frame.midX, y: frame.midY))
         focusedDisplayID = display.id
+        // Don't wait for the next poll, or callers keep seeing the old window as focused.
+        focusedPID = entry.pid
+        focusedFrame = frame
         return true
     }
 
@@ -120,15 +177,7 @@ final class WindowTracker {
         }
         guard let target = fallback else { return nil }
 
-        let windows = AX.windows(pid: target.pid)
-        let match = windows.first { window in
-            guard !AX.isMinimized(window), let frame = AX.frame(of: window) else { return false }
-            return abs(frame.minX - target.bounds.minX) < 3
-                && abs(frame.minY - target.bounds.minY) < 3
-                && abs(frame.width - target.bounds.width) < 3
-                && abs(frame.height - target.bounds.height) < 3
-        }
-        guard let window = match else { return nil }
+        guard let window = axWindow(pid: target.pid, matching: target.bounds) else { return nil }
         return Remembered(pid: target.pid, window: window)
     }
 

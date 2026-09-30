@@ -1,3 +1,5 @@
+import SwiftUI
+
 /// What the menu bar icon shows. Computed in one place from `AppState`.
 enum MenuBarState: Equatable {
     case active
@@ -27,6 +29,17 @@ extension AppState {
         case .permissionDenied, .noCamera, .failed: return .needsAttention
         case .running: return !tracker.hasFace ? .noFace : .active
         case .stopped, .requestingPermission: return .active
+        }
+    }
+}
+
+extension MenuBarState {
+    /// Icon badge color in the popover.
+    var tint: Color {
+        switch self {
+        case .active: .accentColor
+        case .noFace, .needsAttention: .orange
+        case .pausedByUser, .systemSuspended: .secondary
         }
     }
 }

@@ -1,13 +1,108 @@
 import SwiftUI
 
+enum SettingsTab: String, CaseIterable {
+    case general, switching, windows, displays
+}
+
 struct SettingsView: View {
     static let windowID = "settings"
 
     let tracker: HeadTracker
     let focus: FocusController
-    @State private var loginItem = LaunchAtLogin()
-    @Environment(\.openWindow) private var openWindow
+    @State private var tab: SettingsTab
 
+    init(tracker: HeadTracker, focus: FocusController, tab: SettingsTab = .general) {
+        self.tracker = tracker
+        self.focus = focus
+        _tab = State(initialValue: tab)
+    }
+
+    var body: some View {
+        TabView(selection: $tab) {
+            GeneralTab(tracker: tracker)
+                .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
+            SwitchingTab()
+                .tabItem { Label("Switching", systemImage: "arrow.left.arrow.right") }
+                .tag(SettingsTab.switching)
+            WindowsTab(focus: focus)
+                .tabItem { Label("Windows", systemImage: "macwindow") }
+                .tag(SettingsTab.windows)
+            DisplaysTab(focus: focus)
+                .tabItem { Label("Displays", systemImage: "display") }
+                .tag(SettingsTab.displays)
+        }
+        .frame(width: 520)
+    }
+}
+
+// MARK: - General
+
+private struct GeneralTab: View {
+    let tracker: HeadTracker
+    @State private var loginItem = LaunchAtLogin()
+
+    var body: some View {
+        Form {
+            Section {
+                CameraPicker(tracker: tracker)
+            } header: {
+                Text("Camera")
+            } footer: {
+                Text("FocusFollow only looks at where your head points. Frames stay in memory and are never saved or sent.")
+            }
+
+            Section("Startup") {
+                Toggle("Open at login", isOn: Binding(
+                    get: { loginItem.isEnabled || loginItem.needsApproval },
+                    set: { loginItem.setEnabled($0) }
+                ))
+                if loginItem.needsApproval {
+                    LabeledContent {
+                        Button("Open Login Items…") { loginItem.openLoginItemsSettings() }
+                    } label: {
+                        StatusLabel(kind: .warning, text: "Approve FocusFollow in System Settings to finish.")
+                            .font(.callout)
+                    }
+                }
+                if let message = loginItem.errorMessage {
+                    StatusLabel(kind: .problem, text: message)
+                        .font(.callout)
+                }
+            }
+
+            Section("Shortcuts") {
+                LabeledContent("Pause or resume") {
+                    Text(HotKeyConfig.displayString)
+                        .font(.system(.body, design: .rounded))
+                        .padding(.horizontal, Theme.Space.s)
+                        .padding(.vertical, 2)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: Theme.Radius.s))
+                }
+            }
+
+            Section {
+                HStack {
+                    Spacer()
+                    Text("FocusFollow \(Bundle.main.versionString)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+            .listRowBackground(Color.clear)
+        }
+        .formStyle(.grouped)
+        .onAppear { loginItem.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            loginItem.refresh()
+        }
+    }
+}
+
+// MARK: - Switching
+
+private struct SwitchingTab: View {
     @AppStorage(FocusSettings.dwellDelayKey) private var dwellDelay = FocusSettings.defaultDwellDelay
     @AppStorage(FocusSettings.typingPauseKey) private var typingPause = FocusSettings.defaultTypingPause
     @AppStorage(FocusSettings.mousePauseKey) private var mousePause = FocusSettings.defaultMousePause
@@ -16,124 +111,230 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Switching") {
-                SecondsSlider(
+            Section("Timing") {
+                SettingSlider(
                     title: "Glance delay",
-                    help: "How long you must look at a screen before focus follows. Longer ignores quick glances.",
+                    help: "How long you look at a screen before focus follows. Longer ignores quick glances.",
                     value: $dwellDelay,
                     range: FocusSettings.dwellDelayRange,
-                    step: 0.05
+                    step: 0.05,
+                    format: .seconds
                 )
-                SecondsSlider(
+                SettingSlider(
                     title: "Pause after typing",
-                    help: "Focus stays put for this long after your last keystroke. 0 turns it off.",
+                    help: "Focus stays put this long after your last keystroke.",
                     value: $typingPause,
                     range: FocusSettings.typingPauseRange,
-                    step: 0.5
+                    step: 0.5,
+                    format: .secondsOrOff
                 )
-                SecondsSlider(
+                SettingSlider(
                     title: "Pause after mouse use",
-                    help: "Focus stays put for this long after you last moved the mouse or scrolled. 0 turns it off.",
+                    help: "Focus stays put this long after you last moved the mouse or scrolled.",
                     value: $mousePause,
                     range: FocusSettings.mousePauseRange,
-                    step: 0.5
+                    step: 0.5,
+                    format: .secondsOrOff
                 )
+            }
+
+            Section {
+                SettingSlider(
+                    title: "Head-turn tolerance",
+                    help: "How far off-center you can look and still count as facing a screen. Strict treats more poses as looking away; relaxed switches more readily.",
+                    value: $awayThreshold,
+                    range: FocusSettings.awayThresholdRange,
+                    step: 0.1,
+                    format: .scale(low: "Strict", high: "Relaxed")
+                )
+                if awayThreshold != FocusSettings.defaultAwayThreshold {
+                    Button("Reset to Default") { awayThreshold = FocusSettings.defaultAwayThreshold }
+                        .buttonStyle(.link)
+                }
+            } header: {
+                Text("Sensitivity")
+            }
+
+            Section("Behavior") {
                 Toggle("Move the cursor with focus", isOn: $moveCursor)
             }
+        }
+        .formStyle(.grouped)
+    }
+}
 
-            Section("Head-turn tolerance") {
-                VStack(alignment: .leading, spacing: 4) {
-                    Slider(value: $awayThreshold, in: FocusSettings.awayThresholdRange) {
-                        Text("Tolerance")
-                    } minimumValueLabel: {
-                        Text("Strict")
-                    } maximumValueLabel: {
-                        Text("Relaxed")
-                    }
-                    Text("How far off-center you can look and still count as facing a screen. Strict ignores more poses as looking away; relaxed switches more readily.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Button("Reset to Default") { awayThreshold = FocusSettings.defaultAwayThreshold }
-                    .disabled(awayThreshold == FocusSettings.defaultAwayThreshold)
+// MARK: - Windows
+
+private struct WindowsTab: View {
+    let focus: FocusController
+    @Environment(\.openWindow) private var openWindow
+    @AppStorage(FocusSettings.windowFocusKey) private var windowFocus = FocusSettings.defaultWindowFocus
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Focus windows on the same screen", isOn: $windowFocus)
+            } header: {
+                Text("Same-screen focus")
+            } footer: {
+                Text("Experimental. Looking at a window on the screen you're already on focuses it. It relies on head direction, so it works best with large windows that don't overlap.")
             }
 
-            Section("Camera") {
-                CameraPicker(tracker: tracker)
-            }
-
-            Section("Calibration") {
+            Section {
                 if focus.layout.displays.isEmpty {
                     Text("No displays found").foregroundStyle(.secondary)
                 }
                 ForEach(focus.layout.displays) { display in
                     LabeledContent(focus.layout.label(for: display.id)) {
-                        if focus.isCalibrated(display.id) {
-                            Label("Calibrated", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                        } else {
-                            Label("Not calibrated", systemImage: "exclamationmark.circle")
-                                .foregroundStyle(.orange)
-                        }
+                        GazeGridBadge(focus: focus, displayID: display.id)
                     }
                 }
-                if focus.hasNewDisplaySetup {
-                    Text("This display setup has not been calibrated yet.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Button("Calibrate Gaze Grid…") {
+                    openWindow(id: CalibrationView.windowID)
+                    NSApp.activate()
+                }
+            } header: {
+                Text("Accuracy per screen")
+            } footer: {
+                Text("Screens above \(Int(FocusSettings.maximumWindowError * 100))% error are skipped. On the others, the less accurate the estimate, the wider the no-switch zone around window borders.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Displays
+
+private struct DisplaysTab: View {
+    let focus: FocusController
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Form {
+            Section {
+                if focus.layout.displays.isEmpty {
+                    Text("No displays found").foregroundStyle(.secondary)
+                }
+                ForEach(focus.layout.displays) { display in
+                    LabeledContent(focus.layout.label(for: display.id)) {
+                        ScreenCalibrationBadge(calibrated: focus.isCalibrated(display.id))
+                    }
                 }
                 Button("Recalibrate…") {
                     openWindow(id: CalibrationView.windowID)
                     NSApp.activate()
                 }
+            } header: {
+                Text("Calibration")
+            } footer: {
+                Text(focus.hasNewDisplaySetup
+                     ? "This display setup has not been calibrated yet."
+                     : "Calibration is saved for each arrangement of displays, so it comes back when you reconnect the same ones.")
             }
 
-            Section("General") {
-                Toggle("Open at login", isOn: Binding(
-                    get: { loginItem.isEnabled || loginItem.needsApproval },
-                    set: { loginItem.setEnabled($0) }
-                ))
-                if loginItem.needsApproval {
-                    HStack {
-                        Text("Approve FocusFollow in System Settings to finish.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button("Open Login Items…") { loginItem.openLoginItemsSettings() }
-                    }
-                }
-                if let message = loginItem.errorMessage {
-                    Text(message).font(.caption).foregroundStyle(.red)
-                }
-            }
         }
         .formStyle(.grouped)
-        .frame(width: 480)
-        .onAppear { loginItem.refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            loginItem.refresh()
+    }
+}
+
+// MARK: - Shared pieces
+
+private struct ScreenCalibrationBadge: View {
+    let calibrated: Bool
+
+    var body: some View {
+        StatusLabel(kind: calibrated ? .ok : .warning, text: calibrated ? "Calibrated" : "Not calibrated")
+    }
+}
+
+/// Status of a screen's gaze grid: none, usable, or too coarse for window focus.
+private struct GazeGridBadge: View {
+    let focus: FocusController
+    let displayID: String
+
+    var body: some View {
+        if let model = focus.gazeModels[displayID] {
+            let usable = model.gateError <= FocusSettings.maximumWindowError
+            let kind: Theme.Status = usable ? (model.gateError <= 0.15 ? .ok : .warning) : .problem
+            StatusLabel(kind: kind, text: "\(model.gateError.formatted(.percent.precision(.fractionLength(0)))) error\(usable ? "" : " · too coarse")")
+        } else {
+            StatusLabel(kind: .neutral, text: focus.isCalibrated(displayID) ? "No gaze grid" : "Calibrate the screen first", secondary: true)
         }
     }
 }
 
-private struct SecondsSlider: View {
+/// A labelled slider with a live value, no tick marks, and help text underneath.
+private struct SettingSlider: View {
+    enum Format {
+        case seconds
+        case secondsOrOff
+        case scale(low: String, high: String)
+    }
+
     let title: String
     let help: String
     @Binding var value: Double
     let range: ClosedRange<Double>
     let step: Double
+    let format: Format
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            LabeledContent(title) {
-                Text(value == 0 ? "Off" : "\(value, format: .number.precision(.fractionLength(1...2))) s")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            HStack {
+                Text(title)
+                Spacer()
+                if let text = valueText {
+                    Text(text)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
             }
-            Slider(value: $value, in: range, step: step)
+            HStack(spacing: Theme.Space.s) {
+                if case .scale(let low, _) = format { Text(low).font(.caption).foregroundStyle(.secondary) }
+                // Snap to the step in the binding so the slider shows no tick marks.
+                Slider(value: Binding(
+                    get: { value },
+                    set: { value = snapped($0) }
+                ), in: range) {
+                    Text(title)
+                }
                 .labelsHidden()
+                .accessibilityValue(accessibilityValue)
+                if case .scale(_, let high) = format { Text(high).font(.caption).foregroundStyle(.secondary) }
+            }
             Text(help)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.vertical, Theme.Space.xs)
+    }
+
+    /// Rounds to the step, then to a few decimals so 0.3 is stored as 0.3, and keeps the result inside the range.
+    private func snapped(_ raw: Double) -> Double {
+        let steps = ((raw - range.lowerBound) / step).rounded()
+        let rounded = ((range.lowerBound + steps * step) * 1000).rounded() / 1000
+        return min(max(rounded, range.lowerBound), range.upperBound)
+    }
+
+    private var valueText: String? {
+        switch format {
+        case .seconds: String(format: "%.2f s", value)
+        case .secondsOrOff: value == 0 ? "Off" : String(format: "%.1f s", value)
+        case .scale: nil
+        }
+    }
+
+    private var accessibilityValue: String {
+        switch format {
+        case .seconds, .secondsOrOff: value == 0 ? "Off" : String(format: "%.2f seconds", value)
+        case .scale(let low, let high): "\(Int(((value - range.lowerBound) / (range.upperBound - range.lowerBound)) * 100)) percent between \(low) and \(high)"
+        }
+    }
+}
+
+private extension Bundle {
+    var versionString: String {
+        (infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
     }
 }
