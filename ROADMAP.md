@@ -45,7 +45,7 @@ Build settings: `LSUIElement = YES` (no Dock icon), `NSCameraUsageDescription`, 
 
 ## Phase 1 — Camera + head pose (prototype)
 
-- [ ] Menu bar app shell with `MenuBarExtra`
+- [x] Menu bar app shell with `MenuBarExtra`
 - [x] Camera selection (built-in / external)
 - [x] Capture pipeline at 720p, ≤15 fps, frames kept in memory only
 - [x] Vision face detection (rev. 3) → yaw / pitch / roll per frame
