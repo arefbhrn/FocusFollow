@@ -39,9 +39,14 @@ final class ActivityMonitor {
         return nil
     }
 
-    /// Global key events only arrive once Accessibility is trusted, so retry the install when that changes.
+    /// Global key events only arrive once Accessibility is trusted, and a monitor installed before that
+    /// may never receive them, so reinstall it when trust is granted.
     func accessibilityTrustChanged(_ trusted: Bool) {
-        guard trusted, globalMonitor == nil else { return }
+        guard trusted else { return }
+        if let globalMonitor {
+            NSEvent.removeMonitor(globalMonitor)
+            self.globalMonitor = nil
+        }
         installGlobalMonitor()
     }
 
