@@ -4,6 +4,9 @@ A macOS menu bar app that moves keyboard focus to the screen you're facing, usin
 
 Camera frames stay in memory on your Mac. Nothing is recorded or sent anywhere.
 
+<!-- TODO: add demo GIF here (10-15 s: look left and type, look right and type).
+     Save as docs/demo.gif and use: ![FocusFollow demo](docs/demo.gif) -->
+
 ## Features
 
 - **Screen focus:** detects which display you're facing and focuses the last window you used there.
@@ -16,6 +19,16 @@ Camera frames stay in memory on your Mac. Nothing is recorded or sent anywhere.
 - **Single instance:** launching it again just brings the running copy forward.
 
 Not built yet: focusing split panes inside terminals and editors. See [ROADMAP.md](ROADMAP.md).
+
+## Privacy
+
+A camera app should be easy to check, so here is exactly what it does:
+
+- **Frames never leave memory.** Each camera frame is analysed for head pose on your Mac and discarded. Nothing is written to disk or recorded.
+- **No network code.** The source has no networking at all (no `URLSession`, no sockets), no analytics and no update checker. Search the code to confirm.
+- **Input monitoring keeps timestamps only.** Accessibility is used to notice *when* you type or move the mouse, so it doesn't switch mid-work. What you type is never read or stored.
+- **Calibration stays local.** The only thing saved is your per-display calibration, on your Mac.
+- **You can see it work.** The camera indicator is on only while FocusFollow is running, and **Pause** (⌃⌥⌘F) turns the camera off.
 
 ## Requirements
 
@@ -78,3 +91,7 @@ tccutil reset Camera com.arefbhrn.focusfollow
 - It uses head direction, not eye tracking, so it tells displays apart but not windows on the same screen.
 - Accuracy depends on camera position, lighting and posture. Recalibrate if you move your setup.
 - Minimized, hidden and other-Space windows are never focused.
+
+## License
+
+[MIT](LICENSE)
