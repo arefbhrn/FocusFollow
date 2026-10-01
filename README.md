@@ -4,8 +4,7 @@ A macOS menu bar app that moves keyboard focus to the screen you're facing, usin
 
 Camera frames stay in memory on your Mac. Nothing is recorded or sent anywhere.
 
-<!-- TODO: add demo GIF here (10-15 s: look left and type, look right and type).
-     Save as docs/demo.gif and use: ![FocusFollow demo](docs/demo.gif) -->
+![FocusFollow: turn toward a screen, start typing, turn again and focus follows](docs/demo.gif)
 
 ## Features
 
